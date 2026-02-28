@@ -1,0 +1,205 @@
+import { TileEngine } from './tileEngine';
+import { ScoringEngine } from './scoring';
+import type { Beatmap } from './beatmap';
+import type { TapEvent } from '../../types/shared';
+
+export interface GameLoopConfig {
+  canvasWidth: number;
+  canvasHeight: number;
+  numLanes: number;
+  onScoreUpdate?: (stats: any) => void;
+  onGameOver?: (stats: any) => void;
+}
+
+export class GameLoop {
+  private config: GameLoopConfig;
+  private tileEngine: TileEngine;
+  private scoringEngine: ScoringEngine;
+  private beatmap: Beatmap | null = null;
+  private isRunning = false;
+  private startTime = 0;
+  private lastTime = 0;
+  private animationFrameId: number | null = null;
+  private beatmapIndex = 0;
+  private lives = 3;
+
+  constructor(config: GameLoopConfig) {
+    this.config = config;
+
+    const hitLineY = config.canvasHeight - 150;
+
+    this.tileEngine = new TileEngine({
+      numLanes: config.numLanes,
+      initialSpeed: 200,
+      speedIncrement: 10,
+      tileHeight: 120,
+      canvasHeight: config.canvasHeight,
+      hitLineY
+    });
+
+    this.scoringEngine = new ScoringEngine();
+  }
+
+  /**
+   * Start the game with a beatmap
+   */
+  start(beatmap: Beatmap) {
+    this.beatmap = beatmap;
+    this.isRunning = true;
+    this.startTime = performance.now();
+    this.lastTime = this.startTime;
+    this.beatmapIndex = 0;
+    this.lives = 3;
+
+    this.tileEngine.clear();
+    this.scoringEngine.reset();
+
+    this.loop();
+  }
+
+  /**
+   * Main game loop
+   */
+  private loop = () => {
+    if (!this.isRunning) return;
+
+    const currentTime = performance.now();
+    const deltaTime = currentTime - this.lastTime;
+    this.lastTime = currentTime;
+
+    const gameTime = currentTime - this.startTime;
+
+    // Spawn tiles from beatmap
+    if (this.beatmap) {
+      while (
+        this.beatmapIndex < this.beatmap.notes.length &&
+        this.beatmap.notes[this.beatmapIndex].time <= gameTime
+      ) {
+        const note = this.beatmap.notes[this.beatmapIndex];
+        this.tileEngine.spawnTile(note.lane);
+        this.beatmapIndex++;
+      }
+    }
+
+    // Update tiles
+    const { missedTiles } = this.tileEngine.update(deltaTime);
+
+    // Handle missed tiles
+    for (const tile of missedTiles) {
+      this.scoringEngine.registerMiss();
+      this.lives--;
+
+      if (this.lives <= 0) {
+        this.gameOver();
+        return;
+      }
+    }
+
+    // Notify score update
+    if (this.config.onScoreUpdate) {
+      const stats = this.scoringEngine.getStats();
+      this.config.onScoreUpdate({ ...stats, lives: this.lives });
+    }
+
+    // Check if beatmap is complete
+    if (
+      this.beatmap &&
+      this.beatmapIndex >= this.beatmap.notes.length &&
+      this.tileEngine.getTilesByState('falling').length === 0
+    ) {
+      this.gameOver();
+      return;
+    }
+
+    this.animationFrameId = requestAnimationFrame(this.loop);
+  };
+
+  /**
+   * Handle tap event
+   */
+  handleTap(tap: TapEvent) {
+    if (!this.isRunning) return;
+
+    const tile = this.tileEngine.findNearestTile(tap.lane);
+    if (!tile) return;
+
+    const hitLineY = this.config.canvasHeight - 150;
+    const distance = tile.y + 60 - hitLineY; // 60 = half tile height
+
+    const hitResult = this.scoringEngine.calculateHitResult(distance);
+
+    if (hitResult.quality !== 'miss') {
+      this.tileEngine.hitTile(tile);
+      this.scoringEngine.registerHit(hitResult);
+    }
+  }
+
+  /**
+   * Get tiles for rendering
+   */
+  getTiles() {
+    return this.tileEngine.getTiles();
+  }
+
+  /**
+   * Get current stats
+   */
+  getStats() {
+    return {
+      ...this.scoringEngine.getStats(),
+      lives: this.lives
+    };
+  }
+
+  /**
+   * Pause the game
+   */
+  pause() {
+    this.isRunning = false;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+  }
+
+  /**
+   * Resume the game
+   */
+  resume() {
+    if (this.isRunning) return;
+    this.isRunning = true;
+    this.lastTime = performance.now();
+    this.loop();
+  }
+
+  /**
+   * Game over
+   */
+  private gameOver() {
+    this.isRunning = false;
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+
+    const stats = this.scoringEngine.getStats();
+
+    if (this.config.onGameOver) {
+      this.config.onGameOver(stats);
+    }
+  }
+
+  /**
+   * Stop the game
+   */
+  stop() {
+    this.pause();
+    this.tileEngine.clear();
+    this.scoringEngine.reset();
+  }
+
+  /**
+   * Check if game is running
+   */
+  isPlaying(): boolean {
+    return this.isRunning;
+  }
+}
