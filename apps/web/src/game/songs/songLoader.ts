@@ -4,6 +4,7 @@
 
 import type { Beatmap } from '../engine/beatmap';
 import { validateBeatmapSpacing } from '../engine/beatmap';
+import { noteToFrequency } from '../audio/noteConverter';
 import simpleMelodyData from './simpleMelody.json';
 import riverFlowsInYouData from './riverFlowsInYou.json';
 
@@ -53,6 +54,9 @@ export function loadSong(songId: string): Beatmap {
       throw new Error(`Unknown song: ${songId}`);
   }
 
+  // Convert note names to frequencies if needed
+  beatmap = convertNotesToFrequencies(beatmap);
+
   // Validate note spacing
   const validation = validateBeatmapSpacing(beatmap);
   if (!validation.valid) {
@@ -61,6 +65,34 @@ export function loadSong(songId: string): Beatmap {
   }
 
   return beatmap;
+}
+
+/**
+ * Convert note names to frequencies in a beatmap
+ * Supports both "note" (string like "C4") and "noteFrequency" (number) formats
+ */
+function convertNotesToFrequencies(beatmap: Beatmap): Beatmap {
+  return {
+    ...beatmap,
+    notes: beatmap.notes.map(note => {
+      // If note has a "note" property (string), convert it to frequency
+      if ('note' in note && typeof (note as any).note === 'string') {
+        const noteName = (note as any).note;
+        try {
+          const frequency = noteToFrequency(noteName);
+          return {
+            ...note,
+            noteFrequency: frequency
+          };
+        } catch (error) {
+          console.error(`Failed to convert note "${noteName}":`, error);
+          return note;
+        }
+      }
+      // If already has noteFrequency, keep it as is
+      return note;
+    })
+  };
 }
 
 /**

@@ -1,0 +1,23 @@
+{
+  "id": "example-notes",
+  "name": "Example with Note Names",
+  "artist": "Demo",
+  "bpm": 120,
+  "duration": 10000,
+  "notes": [
+    { "lane": 0, "time": 0, "note": "C4" },
+    { "lane": 1, "time": 500, "note": "D4" },
+    { "lane": 2, "time": 1000, "note": "E4" },
+    { "lane": 3, "time": 1500, "note": "F4" },
+
+    { "lane": 0, "time": 2000, "note": "G4" },
+    { "lane": 1, "time": 2500, "note": "A4" },
+    { "lane": 2, "time": 3000, "note": "B4" },
+    { "lane": 3, "time": 3500, "note": "C5" },
+
+    { "lane": 0, "time": 4000, "note": "C#4" },
+    { "lane": 1, "time": 4500, "note": "Eb4" },
+    { "lane": 2, "time": 5000, "note": "F#4" },
+    { "lane": 3, "time": 5500, "note": "Ab4" }
+  ]
+}

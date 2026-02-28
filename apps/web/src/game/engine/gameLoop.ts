@@ -23,7 +23,6 @@ export class GameLoop {
   private lastTime = 0;
   private animationFrameId: number | null = null;
   private beatmapIndex = 0;
-  private lives = 3;
 
   constructor(config: GameLoopConfig) {
     this.config = config;
@@ -51,7 +50,6 @@ export class GameLoop {
     this.startTime = performance.now();
     this.lastTime = this.startTime;
     this.beatmapIndex = 0;
-    this.lives = 3;
 
     this.tileEngine.clear();
     this.scoringEngine.reset();
@@ -86,21 +84,15 @@ export class GameLoop {
     // Update tiles
     const { missedTiles } = this.tileEngine.update(deltaTime);
 
-    // Handle missed tiles
+    // Handle missed tiles (track for accuracy but don't end game)
     for (const tile of missedTiles) {
       this.scoringEngine.registerMiss();
-      this.lives--;
-
-      if (this.lives <= 0) {
-        this.gameOver();
-        return;
-      }
     }
 
     // Notify score update
     if (this.config.onScoreUpdate) {
       const stats = this.scoringEngine.getStats();
-      this.config.onScoreUpdate({ ...stats, lives: this.lives });
+      this.config.onScoreUpdate(stats);
     }
 
     // Check if beatmap is complete
@@ -187,10 +179,7 @@ export class GameLoop {
    * Get current stats
    */
   getStats() {
-    return {
-      ...this.scoringEngine.getStats(),
-      lives: this.lives
-    };
+    return this.scoringEngine.getStats();
   }
 
   /**
