@@ -2,14 +2,18 @@
  * Beatmap system for generating tile patterns
  */
 
+import { MIN_NOTE_SPACING_MS, BPM_CONFIG } from '../constants';
+
 export interface BeatmapNote {
   lane: number;
   time: number; // ms from start
+  noteFrequency?: number; // Optional frequency for melodic playback
 }
 
 export interface Beatmap {
   id: string;
   name: string;
+  artist?: string;
   bpm: number;
   duration: number; // ms
   notes: BeatmapNote[];
@@ -22,9 +26,12 @@ export function generateProceduralBeatmap(
   duration: number = 60000, // 1 minute
   difficulty: 'easy' | 'medium' | 'hard' = 'medium'
 ): Beatmap {
-  // Slower BPM for more spacing between tiles
-  const bpm = difficulty === 'easy' ? 80 : difficulty === 'medium' ? 100 : 120;
+  // Use configured BPM values
+  const bpm = BPM_CONFIG[difficulty];
   const beatInterval = (60 / bpm) * 1000; // ms per beat
+
+  // Ensure beat interval respects minimum spacing
+  const effectiveBeatInterval = Math.max(beatInterval, MIN_NOTE_SPACING_MS);
 
   const notes: BeatmapNote[] = [];
   let currentTime = 3000; // Start after 3 seconds (more preparation time)
@@ -54,11 +61,11 @@ export function generateProceduralBeatmap(
 
       notes.push({
         lane,
-        time: currentTime + (Math.random() * randomness * beatInterval)
+        time: currentTime + (Math.random() * randomness * effectiveBeatInterval)
       });
     }
 
-    currentTime += beatInterval;
+    currentTime += effectiveBeatInterval;
   }
 
   return {
@@ -94,7 +101,7 @@ export function loadBeatmapFromJSON(json: string): Beatmap {
  */
 export function createPatternBeatmap(): Beatmap {
   const notes: BeatmapNote[] = [];
-  const interval = 500; // 500ms between notes
+  const interval = MIN_NOTE_SPACING_MS; // Use configured minimum spacing
 
   // Pattern: 0-1-2-3, 3-2-1-0, repeat
   for (let i = 0; i < 60; i++) {
@@ -112,4 +119,42 @@ export function createPatternBeatmap(): Beatmap {
     duration: 32000,
     notes
   };
+}
+
+/**
+ * Validate beatmap note spacing
+ * Checks if all notes meet the minimum spacing requirement
+ */
+export function validateBeatmapSpacing(beatmap: Beatmap): {
+  valid: boolean;
+  errors: string[];
+} {
+  const errors: string[] = [];
+  const sortedNotes = [...beatmap.notes].sort((a, b) => a.time - b.time);
+
+  for (let i = 1; i < sortedNotes.length; i++) {
+    const prevNote = sortedNotes[i - 1];
+    const currNote = sortedNotes[i];
+    const spacing = currNote.time - prevNote.time;
+
+    if (spacing < MIN_NOTE_SPACING_MS) {
+      errors.push(
+        `Note ${i} at ${currNote.time}ms is too close to previous note (${spacing}ms spacing, minimum: ${MIN_NOTE_SPACING_MS}ms)`
+      );
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+/**
+ * Get recommended spacing for a given BPM
+ * Useful for creating new songs
+ */
+export function getRecommendedSpacing(bpm: number): number {
+  const beatInterval = (60 / bpm) * 1000; // ms per beat
+  return Math.max(beatInterval, MIN_NOTE_SPACING_MS);
 }

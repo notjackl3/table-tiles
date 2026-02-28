@@ -7,6 +7,7 @@ export interface Tile {
   hitWindowMs: number;
   spawnedAt: number;
   state: 'falling' | 'hit' | 'missed';
+  noteFrequency?: number; // Optional frequency for melodic playback
 }
 
 export interface GameState {

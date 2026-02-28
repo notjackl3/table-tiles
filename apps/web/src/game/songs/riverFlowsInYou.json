@@ -1,0 +1,43 @@
+{
+  "id": "river-flows-in-you",
+  "name": "River Flows in You",
+  "artist": "Yiruma",
+  "bpm": 72,
+  "duration": 45000,
+  "notes": [
+{ "lane": 3, "time": 0, "noteFrequency": 783.99 },
+    { "lane": 3, "time": 500, "noteFrequency": 587.33 },
+    { "lane": 3, "time": 1000, "noteFrequency": 783.99 },
+    { "lane": 3, "time": 1500, "noteFrequency": 880.0 },
+    { "lane": 3, "time": 2000, "noteFrequency": 880.0 },
+    { "lane": 3, "time": 2500, "noteFrequency": 987.77 },
+    { "lane": 3, "time": 3000, "noteFrequency": 987.77 },
+
+    { "lane": 3, "time": 3500, "noteFrequency": 783.99 },
+    { "lane": 3, "time": 4000, "noteFrequency": 880.0 },
+    { "lane": 3, "time": 4500, "noteFrequency": 987.77 },
+    { "lane": 3, "time": 5000, "noteFrequency": 880.0 },
+    { "lane": 3, "time": 5500, "noteFrequency": 587.33 },
+    { "lane": 3, "time": 6000, "noteFrequency": 587.33 },
+
+    { "lane": 3, "time": 6500, "noteFrequency": 587.33 },
+    { "lane": 3, "time": 7000, "noteFrequency": 659.25 },
+    { "lane": 3, "time": 7500, "noteFrequency": 739.99 },
+    { "lane": 3, "time": 8000, "noteFrequency": 739.99 },
+    { "lane": 3, "time": 8500, "noteFrequency": 783.99 },
+    { "lane": 3, "time": 9000, "noteFrequency": 783.99 },
+
+    { "lane": 3, "time": 9500, "noteFrequency": 880.0 },
+    { "lane": 3, "time": 10000, "noteFrequency": 987.77 },
+    { "lane": 3, "time": 10500, "noteFrequency": 880.0 },
+    { "lane": 3, "time": 11000, "noteFrequency": 783.99 },
+    { "lane": 3, "time": 11500, "noteFrequency": 739.99 },
+
+    { "lane": 3, "time": 12000, "noteFrequency": 783.99 },
+    { "lane": 3, "time": 12500, "noteFrequency": 739.99 },
+    { "lane": 3, "time": 13000, "noteFrequency": 587.33 },
+    { "lane": 3, "time": 13500, "noteFrequency": 587.33 },
+    { "lane": 3, "time": 14000, "noteFrequency": 659.25 },
+    { "lane": 3, "time": 14500, "noteFrequency": 659.25 }
+  ]
+}

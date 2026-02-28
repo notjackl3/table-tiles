@@ -10,7 +10,7 @@ export interface GameLoopConfig {
   latencyCompensationMs?: number; // Milliseconds to compensate for hand tracking delay
   onScoreUpdate?: (stats: any) => void;
   onGameOver?: (stats: any) => void;
-  onHit?: (lane: number, quality: string) => void;
+  onHit?: (lane: number, quality: string, noteFrequency?: number) => void;
 }
 
 export class GameLoop {
@@ -78,7 +78,7 @@ export class GameLoop {
         this.beatmap.notes[this.beatmapIndex].time <= gameTime
       ) {
         const note = this.beatmap.notes[this.beatmapIndex];
-        this.tileEngine.spawnTile(note.lane);
+        this.tileEngine.spawnTile(note.lane, note.noteFrequency);
         this.beatmapIndex++;
       }
     }
@@ -169,7 +169,7 @@ export class GameLoop {
 
       // Notify about successful hit
       if (this.config.onHit) {
-        this.config.onHit(tap.lane, hitResult.quality);
+        this.config.onHit(tap.lane, hitResult.quality, tile.noteFrequency);
       }
     } else {
       console.log('[GameLoop] Hit quality was miss, not processing');

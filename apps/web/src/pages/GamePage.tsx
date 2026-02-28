@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import type { HandLandmarks, TapEvent } from '../types/shared';
 import { VisionLoop } from '../vision/visionLoop';
 import { GameLoop } from '../game/engine/gameLoop';
-import { generateProceduralBeatmap } from '../game/engine/beatmap';
 import { getAudioEngine } from '../game/audio/audioEngine';
+import type { HitQuality } from '../game/audio/audioEngine';
 import { HAND_LANDMARKS } from '../vision/handTracker';
 import { SettingsPanel } from '../game/SettingsPanel';
+import { SongSelection } from '../game/SongSelection';
+import { loadSong } from '../game/songs/songLoader';
 
 export function GamePage() {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ export function GamePage() {
   const [score, setScore] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [recentTaps, setRecentTaps] = useState<TapEvent[]>([]);
+  const [selectedSongId, setSelectedSongId] = useState<string | null>('simple-melody');
 
   // White flash tiles for visual feedback
   interface FlashTile {
@@ -131,12 +134,22 @@ export function GamePage() {
     initCamera();
 
     return () => {
+      console.log('[GamePage Cleanup] Stopping camera and vision loop...');
       if (visionLoopRef.current) {
         visionLoopRef.current.close();
+        visionLoopRef.current = null;
       }
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+          console.log('[GamePage Cleanup] Stopped track:', track.kind);
+        });
+        streamRef.current = null;
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+      console.log('[GamePage Cleanup] Cleanup complete');
     };
   }, []);
 
@@ -211,7 +224,7 @@ export function GamePage() {
       console.log('[GamePage] Forwarding', taps.length, 'taps to game loop');
       for (const tap of taps) {
         gameLoopRef.current.handleTap(tap);
-        audioEngine.playHitSound(tap.lane, 'perfect');
+        // Note: Audio will be played in onHit callback with proper note frequency
       }
     } else {
       console.log('[GamePage] NOT forwarding taps - gameLoop exists:', !!gameLoopRef.current, 'isPlaying:', gameLoopRef.current?.isPlaying());
@@ -220,6 +233,11 @@ export function GamePage() {
 
   const startGame = () => {
     console.log('[GamePage] Starting game...');
+
+    if (!selectedSongId) {
+      alert('Please select a song first!');
+      return;
+    }
 
     // Initialize audio
     audioEngine.initialize();
@@ -239,25 +257,28 @@ export function GamePage() {
         alert(`Game Over! Score: ${stats.score}`);
         setGameStarted(false);
       },
-      onHit: (lane, quality) => {
+      onHit: (lane, quality, noteFrequency) => {
         // Add green highlight for successful hit
-        console.log('[GamePage] Successful hit!', lane, quality);
+        console.log('[GamePage] Successful hit!', lane, quality, noteFrequency);
         setHitHighlights((prev) => {
           const now = performance.now();
           const filtered = prev.filter((h) => now - h.timestamp < 500);
           return [...filtered, { lane, timestamp: now }];
         });
+
+        // Play melodic sound with noteFrequency if available
+        audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
       }
     });
 
     gameLoopRef.current = gameLoop;
 
-    // Generate beatmap and start
-    const beatmap = generateProceduralBeatmap(60000, 'medium');
+    // Load beatmap from selected song
+    const beatmap = loadSong(selectedSongId);
     gameLoop.start(beatmap);
 
     setGameStarted(true);
-    console.log('[GamePage] Game started');
+    console.log('[GamePage] Game started with song:', selectedSongId);
   };
 
   // Render game canvas
@@ -340,7 +361,29 @@ export function GamePage() {
           const tileHeight = 80;
           const opacity = 1 - (age / 400); // Fade out
 
-          // Green flash overlay
+          // White column glow/sparkle effect (entire column)
+          if (age < 300) { // Show sparkle for 300ms
+            const sparkleOpacity = 1 - (age / 300);
+            const pulseEffect = Math.sin((age / 50) * Math.PI) * 0.3 + 0.7; // Pulsing effect
+
+            // Draw white glow for entire column
+            const gradient = ctx.createLinearGradient(x + laneWidth / 2, 0, x + laneWidth / 2, height);
+            gradient.addColorStop(0, `rgba(255, 255, 255, ${sparkleOpacity * 0.2 * pulseEffect})`);
+            gradient.addColorStop(0.5, `rgba(255, 255, 255, ${sparkleOpacity * 0.4 * pulseEffect})`);
+            gradient.addColorStop(1, `rgba(255, 255, 255, ${sparkleOpacity * 0.2 * pulseEffect})`);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(x, 0, laneWidth, height);
+
+            // Bright white glow at edges
+            ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
+            ctx.shadowBlur = 20 * sparkleOpacity;
+            ctx.strokeStyle = `rgba(255, 255, 255, ${sparkleOpacity * 0.6})`;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, 0, laneWidth, height);
+            ctx.shadowBlur = 0; // Reset shadow
+          }
+
+          // Green flash overlay (at hit zone)
           ctx.fillStyle = `rgba(111, 168, 122, ${opacity * 0.6})`;
           ctx.fillRect(x + 5, hitLineY - tileHeight, tileWidth, tileHeight);
 
@@ -571,10 +614,19 @@ export function GamePage() {
           )}
           </div>
         </div>
+
+        {/* Song selection sidebar - only show before game starts */}
+        {cameraReady && !gameStarted && (
+          <SongSelection
+            selectedSongId={selectedSongId}
+            onSelectSong={setSelectedSongId}
+            audioEngine={audioEngine}
+          />
+        )}
       </div>
 
       {/* Finger statistics (bottom-right) */}
-      <div className="game-stats">
+      {/* <div className="game-stats">
         <h3>Finger Tracking</h3>
         {fingerStats.map((stat) => (
           <div key={stat.tile} className={`finger-stat ${stat.active ? 'active' : ''}`}>
@@ -584,7 +636,7 @@ export function GamePage() {
             </span>
           </div>
         ))}
-      </div>
+      </div> */}
 
       {/* Back button */}
       <button
@@ -597,6 +649,26 @@ export function GamePage() {
         }}
       >
         ← Back
+      </button>
+
+      {/* Test Audio button */}
+      <button
+        className="button"
+        onClick={() => {
+          audioEngine.initialize();
+          audioEngine.resume();
+          audioEngine.playTestAudio360();
+        }}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: 'var(--accent)',
+          color: 'white',
+        }}
+        title="Test 3D spatial audio - listen to a sound rotate 360° around your head"
+      >
+        🎧 Test Audio
       </button>
     </div>
   );

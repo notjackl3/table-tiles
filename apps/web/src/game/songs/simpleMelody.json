@@ -1,0 +1,48 @@
+{
+  "id": "simple-melody",
+  "name": "Simple Melody",
+  "artist": "Tutorial",
+  "bpm": 120,
+  "duration": 30000,
+  "notes": [
+    { "lane": 0, "time": 2000, "noteFrequency": 261.63 },
+    { "lane": 1, "time": 2500, "noteFrequency": 329.63 },
+    { "lane": 2, "time": 3000, "noteFrequency": 392.0 },
+    { "lane": 3, "time": 3500, "noteFrequency": 493.88 },
+
+    { "lane": 3, "time": 4500, "noteFrequency": 493.88 },
+    { "lane": 2, "time": 5000, "noteFrequency": 392.0 },
+    { "lane": 1, "time": 5500, "noteFrequency": 329.63 },
+    { "lane": 0, "time": 6000, "noteFrequency": 261.63 },
+
+    { "lane": 0, "time": 7000, "noteFrequency": 261.63 },
+    { "lane": 2, "time": 7500, "noteFrequency": 392.0 },
+    { "lane": 0, "time": 8000, "noteFrequency": 261.63 },
+    { "lane": 2, "time": 8500, "noteFrequency": 392.0 },
+
+    { "lane": 1, "time": 9500, "noteFrequency": 329.63 },
+    { "lane": 1, "time": 10000, "noteFrequency": 329.63 },
+    { "lane": 3, "time": 10500, "noteFrequency": 493.88 },
+    { "lane": 3, "time": 11000, "noteFrequency": 493.88 },
+
+    { "lane": 0, "time": 12000, "noteFrequency": 261.63 },
+    { "lane": 1, "time": 12500, "noteFrequency": 329.63 },
+    { "lane": 2, "time": 13000, "noteFrequency": 392.0 },
+    { "lane": 3, "time": 13500, "noteFrequency": 493.88 },
+
+    { "lane": 2, "time": 14500, "noteFrequency": 392.0 },
+    { "lane": 2, "time": 15000, "noteFrequency": 392.0 },
+    { "lane": 1, "time": 15500, "noteFrequency": 329.63 },
+    { "lane": 1, "time": 16000, "noteFrequency": 329.63 },
+
+    { "lane": 0, "time": 17000, "noteFrequency": 261.63 },
+    { "lane": 0, "time": 17500, "noteFrequency": 261.63 },
+    { "lane": 1, "time": 18000, "noteFrequency": 329.63 },
+    { "lane": 2, "time": 18500, "noteFrequency": 392.0 },
+
+    { "lane": 3, "time": 19500, "noteFrequency": 493.88 },
+    { "lane": 2, "time": 20000, "noteFrequency": 392.0 },
+    { "lane": 1, "time": 20500, "noteFrequency": 329.63 },
+    { "lane": 0, "time": 21000, "noteFrequency": 261.63 }
+  ]
+}

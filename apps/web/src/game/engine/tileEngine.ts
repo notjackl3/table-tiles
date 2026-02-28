@@ -24,7 +24,7 @@ export class TileEngine {
   /**
    * Spawn a new tile
    */
-  spawnTile(lane: number): Tile {
+  spawnTile(lane: number, noteFrequency?: number): Tile {
     const tile: Tile = {
       id: uuidv4(),
       lane,
@@ -32,7 +32,8 @@ export class TileEngine {
       speed: this.currentSpeed,
       hitWindowMs: 100,
       spawnedAt: performance.now(),
-      state: 'falling'
+      state: 'falling',
+      noteFrequency
     };
 
     this.tiles.push(tile);
