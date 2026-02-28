@@ -1,6 +1,6 @@
-import { HandTracker, extractFingertips } from './handTracker';
-import { TapDetector } from './tap/tapDetector';
-import type { HandLandmarks, TapEvent, TableCalibration } from '../types/shared';
+import { HandTracker } from './handTracker';
+import { FingerBendDetector, type FingerBendEvent } from './fingerBend/fingerBendDetector';
+import type { HandLandmarks, TapEvent } from '../types/shared';
 
 export interface VisionLoopCallbacks {
   onHands?: (hands: HandLandmarks[]) => void;
@@ -9,7 +9,7 @@ export interface VisionLoopCallbacks {
 
 export class VisionLoop {
   private handTracker: HandTracker;
-  private tapDetector: TapDetector;
+  private bendDetector: FingerBendDetector;
   private videoElement: HTMLVideoElement;
   private callbacks: VisionLoopCallbacks;
   private currentHands: HandLandmarks[] = [];
@@ -21,7 +21,8 @@ export class VisionLoop {
     this.videoElement = videoElement;
     this.callbacks = callbacks;
     this.handTracker = new HandTracker();
-    this.tapDetector = new TapDetector();
+    // Use lower sensitivity (0.25) for easier tap detection with 100ms cooldown for faster tapping
+    this.bendDetector = new FingerBendDetector(0.25, 100);
   }
 
   async initialize() {
@@ -45,23 +46,55 @@ export class VisionLoop {
       this.callbacks.onHands(hands);
     }
 
-    // Extract fingertips and detect taps
-    const fingertips = extractFingertips(
-      hands,
-      this.videoElement.videoWidth,
-      this.videoElement.videoHeight
-    );
+    // Detect finger bends and convert to tap events
+    const bendEvents = this.bendDetector.detect(hands, performance.now());
 
-    const taps = this.tapDetector.detect(fingertips, performance.now());
+    // Convert finger bend events to tap events for compatibility
+    if (bendEvents.length > 0) {
+      const taps: TapEvent[] = bendEvents.map((event: FingerBendEvent) => ({
+        fingerIndex: event.tile, // Use tile number as finger index
+        lane: event.tile,
+        x: 0, // Not needed for bend detection
+        y: 0, // Not needed for bend detection
+        timestamp: event.timestamp
+      }));
 
-    // Notify taps callback
-    if (taps.length > 0 && this.callbacks.onTaps) {
-      this.callbacks.onTaps(taps);
+      if (this.callbacks.onTaps) {
+        this.callbacks.onTaps(taps);
+      }
     }
   }
 
-  setCalibration(calibration: TableCalibration) {
-    this.tapDetector.setCalibration(calibration);
+  setSensitivity(sensitivity: number) {
+    this.bendDetector.setSensitivity(sensitivity);
+  }
+
+  getSensitivity(): number {
+    return this.bendDetector.getSensitivity();
+  }
+
+  setVelocityThreshold(velocityThreshold: number) {
+    this.bendDetector.setVelocityThreshold(velocityThreshold);
+  }
+
+  getVelocityThreshold(): number {
+    return this.bendDetector.getVelocityThreshold();
+  }
+
+  setCooldown(cooldownMs: number) {
+    this.bendDetector.setCooldown(cooldownMs);
+  }
+
+  getCooldown(): number {
+    return this.bendDetector.getCooldown();
+  }
+
+  setTapMotionTimeout(tapMotionTimeoutMs: number) {
+    this.bendDetector.setTapMotionTimeout(tapMotionTimeoutMs);
+  }
+
+  getTapMotionTimeout(): number {
+    return this.bendDetector.getTapMotionTimeout();
   }
 
   getCurrentHands(): HandLandmarks[] {
@@ -69,7 +102,7 @@ export class VisionLoop {
   }
 
   getFingerStates() {
-    return this.tapDetector.getFingerStates();
+    return this.bendDetector.getFingerStates();
   }
 
   async start() {
@@ -82,6 +115,6 @@ export class VisionLoop {
 
   close() {
     this.handTracker.close();
-    this.tapDetector.reset();
+    this.bendDetector.reset();
   }
 }

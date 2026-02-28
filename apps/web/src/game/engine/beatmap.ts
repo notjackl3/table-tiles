@@ -22,17 +22,18 @@ export function generateProceduralBeatmap(
   duration: number = 60000, // 1 minute
   difficulty: 'easy' | 'medium' | 'hard' = 'medium'
 ): Beatmap {
-  const bpm = difficulty === 'easy' ? 100 : difficulty === 'medium' ? 120 : 140;
+  // Slower BPM for more spacing between tiles
+  const bpm = difficulty === 'easy' ? 80 : difficulty === 'medium' ? 100 : 120;
   const beatInterval = (60 / bpm) * 1000; // ms per beat
 
   const notes: BeatmapNote[] = [];
-  let currentTime = 2000; // Start after 2 seconds
+  let currentTime = 3000; // Start after 3 seconds (more preparation time)
 
-  // Pattern parameters based on difficulty
+  // Pattern parameters based on difficulty - reduced density for easier gameplay
   const patterns = {
-    easy: { notesPerBeat: 0.5, randomness: 0.2 },
-    medium: { notesPerBeat: 0.75, randomness: 0.3 },
-    hard: { notesPerBeat: 1.0, randomness: 0.4 }
+    easy: { notesPerBeat: 0.4, randomness: 0.2 },    // 40% chance per beat
+    medium: { notesPerBeat: 0.5, randomness: 0.3 },  // 50% chance per beat (was 75%)
+    hard: { notesPerBeat: 0.7, randomness: 0.4 }     // 70% chance per beat (was 100%)
   };
 
   const { notesPerBeat, randomness } = patterns[difficulty];

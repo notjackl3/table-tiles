@@ -1,20 +1,7 @@
+import * as handPoseDetection from '@tensorflow-models/hand-pose-detection';
+import * as tf from '@tensorflow/tfjs-core';
+import '@tensorflow/tfjs-backend-webgl';
 import type { HandLandmarks, Point2D } from '../types/shared';
-
-// MediaPipe types
-interface NormalizedLandmark {
-  x: number;
-  y: number;
-  z: number;
-}
-
-interface Results {
-  multiHandLandmarks?: NormalizedLandmark[][];
-  multiHandedness?: Array<{ label: string }>;
-  multiHandWorldLandmarks?: Array<Array<{ x: number; y: number; z: number }>>;
-}
-
-// MediaPipe Hands class (loaded from CDN in index.html)
-declare const Hands: any;
 
 export interface HandTrackerConfig {
   maxNumHands?: number;
@@ -26,7 +13,7 @@ export interface HandTrackerConfig {
 export type HandTrackerCallback = (hands: HandLandmarks[]) => void;
 
 export class HandTracker {
-  private hands: Hands | null = null;
+  private detector: handPoseDetection.HandDetector | null = null;
   private videoElement: HTMLVideoElement | null = null;
   private callback: HandTrackerCallback | null = null;
   private animationFrameId: number | null = null;
@@ -40,84 +27,92 @@ export class HandTracker {
     this.videoElement = videoElement;
     this.callback = callback;
 
-    console.log('[HandTracker] Initializing MediaPipe Hands...');
-    console.log('[HandTracker] Hands class available:', typeof Hands !== 'undefined');
+    console.log('[HandTracker] Initializing TensorFlow.js HandPose...');
 
-    if (typeof Hands === 'undefined') {
-      console.error('[HandTracker] MediaPipe Hands not loaded! Check CDN scripts in index.html');
-      throw new Error('MediaPipe Hands not loaded');
+    try {
+      // Set backend to WebGL
+      await tf.setBackend('webgl');
+      await tf.ready();
+      console.log('[HandTracker] TensorFlow.js backend ready:', tf.getBackend());
+
+      // Create the hand detector
+      const model = handPoseDetection.SupportedModels.MediaPipeHands;
+      const detectorConfig: handPoseDetection.MediaPipeHandsMediaPipeModelConfig = {
+        runtime: 'mediapipe',
+        solutionPath: 'https://cdn.jsdelivr.net/npm/@mediapipe/hands',
+        maxHands: config.maxNumHands ?? 2,
+        modelType: config.modelComplexity === 0 ? 'lite' : 'full',
+      };
+
+      console.log('[HandTracker] Creating detector with config:', detectorConfig);
+      this.detector = await handPoseDetection.createDetector(model, detectorConfig);
+      console.log('[HandTracker] Detector created successfully');
+
+    } catch (error) {
+      console.error('[HandTracker] Initialization error:', error);
+      throw error;
     }
-
-    // Initialize MediaPipe Hands
-    this.hands = new Hands({
-      locateFile: (file) => {
-        const url = `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-        console.log('[HandTracker] Loading MediaPipe file:', url);
-        return url;
-      }
-    });
-
-    console.log('[HandTracker] MediaPipe Hands instance created');
-
-    this.hands.setOptions({
-      maxNumHands: config.maxNumHands ?? 2,
-      modelComplexity: config.modelComplexity ?? 1,
-      minDetectionConfidence: config.minDetectionConfidence ?? 0.7,
-      minTrackingConfidence: config.minTrackingConfidence ?? 0.7
-    });
-
-    this.hands.onResults((results) => this.onResults(results));
 
     return this;
   }
 
-  private onResults(results: Results) {
-    if (!this.callback) return;
-
-    const hands: HandLandmarks[] = [];
-
-    if (results.multiHandLandmarks && results.multiHandedness) {
-      for (let i = 0; i < results.multiHandLandmarks.length; i++) {
-        const landmarks = results.multiHandLandmarks[i];
-        const handedness = results.multiHandedness[i];
-
-        // Convert MediaPipe landmarks to our format
-        const landmarkPoints: Point2D[] = landmarks.map((lm) => ({
-          x: lm.x,
-          y: lm.y
-        }));
-
-        hands.push({
-          landmarks: landmarkPoints,
-          handedness: handedness.label as 'Left' | 'Right',
-          worldLandmarks: results.multiHandWorldLandmarks?.[i]?.map((lm) => ({
-            x: lm.x,
-            y: lm.y,
-            z: lm.z
-          }))
-        });
-      }
-    }
-
-    this.callback(hands);
-  }
-
   async start() {
-    if (!this.hands || !this.videoElement) {
+    if (!this.detector || !this.videoElement) {
       throw new Error('HandTracker not initialized');
     }
 
+    console.log('[HandTracker] Starting detection loop...');
     this.isRunning = true;
     this.detectLoop();
   }
 
   private async detectLoop() {
-    if (!this.isRunning || !this.hands || !this.videoElement) return;
+    if (!this.isRunning || !this.detector || !this.videoElement) return;
 
     try {
-      await this.hands.send({ image: this.videoElement });
+      // Check if video is ready and has valid dimensions
+      if (
+        this.videoElement.readyState >= 2 &&
+        this.videoElement.videoWidth > 0 &&
+        this.videoElement.videoHeight > 0
+      ) {
+        // Detect hands
+        const hands = await this.detector.estimateHands(this.videoElement, {
+          flipHorizontal: false,
+        });
+
+        // Convert to our format
+        const formattedHands: HandLandmarks[] = hands.map((hand) => {
+          const landmarks: Point2D[] = hand.keypoints.map((kp) => ({
+            x: kp.x / this.videoElement!.videoWidth,
+            y: kp.y / this.videoElement!.videoHeight,
+          }));
+
+          const handedness = hand.handedness === 'Left' ? 'Right' : 'Left'; // Flip because camera is mirrored
+
+          return {
+            landmarks,
+            handedness: handedness as 'Left' | 'Right',
+            worldLandmarks: hand.keypoints3D?.map((kp) => ({
+              x: kp.x,
+              y: kp.y,
+              z: kp.z ?? 0,
+            })),
+          };
+        });
+
+        if (this.callback) {
+          this.callback(formattedHands);
+        }
+      } else {
+        console.log('[HandTracker] Waiting for video to be ready...', {
+          readyState: this.videoElement.readyState,
+          width: this.videoElement.videoWidth,
+          height: this.videoElement.videoHeight
+        });
+      }
     } catch (error) {
-      console.error('Hand detection error:', error);
+      console.error('[HandTracker] Detection error:', error);
     }
 
     // Cap at ~30fps for performance
@@ -138,14 +133,14 @@ export class HandTracker {
 
   close() {
     this.stop();
-    if (this.hands) {
-      this.hands.close();
-      this.hands = null;
+    if (this.detector) {
+      this.detector.dispose();
+      this.detector = null;
     }
   }
 }
 
-// MediaPipe Hand landmark indices
+// MediaPipe Hand landmark indices (same as before - 21 landmarks)
 export const HAND_LANDMARKS = {
   WRIST: 0,
   THUMB_CMC: 1,

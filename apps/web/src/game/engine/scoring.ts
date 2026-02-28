@@ -1,10 +1,11 @@
 import type { HitResult } from '../../types/shared';
 
 // Hit window thresholds (in pixels from hit line)
+// Increased for more forgiving timing
 export const HIT_WINDOWS = {
-  perfect: 30,
-  good: 60,
-  miss: 100
+  perfect: 40,   // Was 30px
+  good: 80,      // Was 60px
+  miss: 120      // Was 100px
 };
 
 // Points awarded
@@ -89,8 +90,11 @@ export class ScoringEngine {
    * Register a hit
    */
   registerHit(hitResult: HitResult) {
+    console.log('[ScoringEngine] Registering hit:', hitResult);
     const multiplier = this.getComboMultiplier();
     const points = Math.floor(hitResult.points * multiplier);
+
+    console.log('[ScoringEngine] Before: score =', this.stats.score, 'combo =', this.stats.combo);
 
     this.stats.score += points;
     this.stats.totalNotes++;
@@ -113,6 +117,8 @@ export class ScoringEngine {
 
     // Update accuracy
     this.updateAccuracy();
+
+    console.log('[ScoringEngine] After: score =', this.stats.score, 'combo =', this.stats.combo, 'points added =', points);
   }
 
   /**

@@ -71,7 +71,7 @@ export interface ScoreSubmission {
 }
 
 // Screen types
-export type GameScreen = 'landing' | 'calibration' | 'gameplay' | 'results';
+export type GameScreen = 'landing' | 'gameplay' | 'results';
 
 export interface ResultsData {
   score: number;

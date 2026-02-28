@@ -7,8 +7,10 @@ export interface GameLoopConfig {
   canvasWidth: number;
   canvasHeight: number;
   numLanes: number;
+  latencyCompensationMs?: number; // Milliseconds to compensate for hand tracking delay
   onScoreUpdate?: (stats: any) => void;
   onGameOver?: (stats: any) => void;
+  onHit?: (lane: number, quality: string) => void;
 }
 
 export class GameLoop {
@@ -118,19 +120,59 @@ export class GameLoop {
    * Handle tap event
    */
   handleTap(tap: TapEvent) {
-    if (!this.isRunning) return;
+    console.log('[GameLoop] handleTap called', { lane: tap.lane, isRunning: this.isRunning });
+
+    if (!this.isRunning) {
+      console.log('[GameLoop] Game not running, ignoring tap');
+      return;
+    }
 
     const tile = this.tileEngine.findNearestTile(tap.lane);
-    if (!tile) return;
+    console.log('[GameLoop] Found nearest tile:', tile);
+
+    if (!tile) {
+      console.log('[GameLoop] No tile found in lane', tap.lane);
+      return;
+    }
 
     const hitLineY = this.config.canvasHeight - 150;
-    const distance = tile.y + 60 - hitLineY; // 60 = half tile height
+
+    // LATENCY COMPENSATION: Predict where the tile will be after the camera delay
+    // This compensates for the ~100-200ms delay in hand tracking
+    const latencyMs = this.config.latencyCompensationMs || 150; // Default 150ms compensation
+    const tileSpeed = tile.speed; // pixels per second
+    const latencyOffset = (tileSpeed * latencyMs) / 1000; // pixels to offset
+
+    // Calculate distance with latency compensation
+    // We pretend the tile is further down than it visually appears
+    const compensatedY = tile.y + latencyOffset;
+    const distance = compensatedY + 60 - hitLineY; // 60 = half tile height
+
+    console.log('[GameLoop] Latency compensation:', {
+      actualY: tile.y,
+      compensatedY,
+      offset: latencyOffset,
+      distance
+    });
 
     const hitResult = this.scoringEngine.calculateHitResult(distance);
+    console.log('[GameLoop] Hit result:', { distance, quality: hitResult.quality, points: hitResult.points });
 
     if (hitResult.quality !== 'miss') {
+      console.log('[GameLoop] Processing hit - before state:', tile.state);
       this.tileEngine.hitTile(tile);
+      console.log('[GameLoop] Processing hit - after state:', tile.state);
+
       this.scoringEngine.registerHit(hitResult);
+      const stats = this.scoringEngine.getStats();
+      console.log('[GameLoop] Score after hit:', stats.score);
+
+      // Notify about successful hit
+      if (this.config.onHit) {
+        this.config.onHit(tap.lane, hitResult.quality);
+      }
+    } else {
+      console.log('[GameLoop] Hit quality was miss, not processing');
     }
   }
 

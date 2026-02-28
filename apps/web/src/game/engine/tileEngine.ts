@@ -63,8 +63,8 @@ export class TileEngine {
       // Remove tiles that are off screen or marked for removal
       if (
         tile.state === 'hit' ||
-        tile.state === 'missed' &&
-        tile.y > this.config.canvasHeight + this.config.tileHeight
+        (tile.state === 'missed' && tile.y > this.config.canvasHeight + this.config.tileHeight) ||
+        (tile.y > this.config.canvasHeight + this.config.tileHeight) // Remove any tile past bottom
       ) {
         tilesToRemove.push(tile);
       }
@@ -105,8 +105,10 @@ export class TileEngine {
    * Mark a tile as hit
    */
   hitTile(tile: Tile) {
+    console.log('[TileEngine] Marking tile as hit:', tile.id, 'current state:', tile.state);
     tile.state = 'hit';
     this.tilesHit++;
+    console.log('[TileEngine] Tile marked as hit, new state:', tile.state, 'total hits:', this.tilesHit);
 
     // Increase speed every 10 tiles
     if (this.tilesHit % 10 === 0) {

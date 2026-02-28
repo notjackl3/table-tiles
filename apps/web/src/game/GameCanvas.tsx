@@ -135,6 +135,34 @@ export function GameCanvas({
         }
       }
 
+      // Draw tile status indicators at the bottom
+      const tileIndicatorHeight = 60;
+      const tileIndicatorY = height - tileIndicatorHeight - 10;
+      const now = performance.now();
+
+      for (let i = 0; i < numLanes; i++) {
+        const x = i * laneWidth + 10;
+        const isActive = recentTaps.some((tap) => tap.lane === i && now - tap.timestamp < 150);
+
+        // Background
+        ctx.fillStyle = isActive ? 'rgba(0, 255, 0, 0.5)' : 'rgba(100, 100, 100, 0.3)';
+        ctx.fillRect(x, tileIndicatorY, laneWidth - 20, tileIndicatorHeight);
+
+        // Border
+        ctx.strokeStyle = isActive ? '#00ff00' : '#666666';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, tileIndicatorY, laneWidth - 20, tileIndicatorHeight);
+
+        // Labels
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px monospace';
+        ctx.textAlign = 'center';
+
+        const labels = ['L Index', 'L Middle', 'R Index', 'R Middle'];
+        ctx.fillText(labels[i], x + (laneWidth - 20) / 2, tileIndicatorY + 25);
+        ctx.fillText(`Tile ${i}`, x + (laneWidth - 20) / 2, tileIndicatorY + 45);
+      }
+
       // Draw HUD
       ctx.font = 'bold 24px monospace';
       ctx.fillStyle = '#ffffff';
@@ -159,7 +187,7 @@ export function GameCanvas({
     };
 
     render();
-  }, [tiles, lives, score, combo, accuracy, width, height, numLanes, laneWidth, hitLineY]);
+  }, [tiles, lives, score, combo, accuracy, width, height, numLanes, laneWidth, hitLineY, recentTaps]);
 
   // Render hand overlay
   useEffect(() => {
@@ -222,28 +250,77 @@ export function GameCanvas({
             const x = lm.x * canvas.width;
             const y = lm.y * canvas.height;
 
+            // Highlight index and middle fingers (8 and 12)
+            const isTrackedFinger = index === HAND_LANDMARKS.INDEX_FINGER_TIP || index === HAND_LANDMARKS.MIDDLE_FINGER_TIP;
+            const isActive = recentTaps.some((tap) => {
+              const now = performance.now();
+              const isRecent = now - tap.timestamp < 200;
+              const matchesLane = (
+                (handedness === 'Left' && index === HAND_LANDMARKS.INDEX_FINGER_TIP && tap.lane === 0) ||
+                (handedness === 'Left' && index === HAND_LANDMARKS.MIDDLE_FINGER_TIP && tap.lane === 1) ||
+                (handedness === 'Right' && index === HAND_LANDMARKS.INDEX_FINGER_TIP && tap.lane === 2) ||
+                (handedness === 'Right' && index === HAND_LANDMARKS.MIDDLE_FINGER_TIP && tap.lane === 3)
+              );
+              return isRecent && matchesLane;
+            });
+
             // Different colors and sizes for different landmarks
             if (FINGERTIP_INDICES.includes(index)) {
               // Fingertips - larger and brighter
-              ctx.fillStyle = handedness === 'Left' ? '#4cff00' : '#00aaff';
-              ctx.beginPath();
-              ctx.arc(x, y, 10, 0, Math.PI * 2);
-              ctx.fill();
-
-              // White border
-              ctx.strokeStyle = '#ffffff';
-              ctx.lineWidth = 2;
-              ctx.stroke();
+              if (isTrackedFinger && isActive) {
+                // Active tracked finger - bright highlight
+                ctx.fillStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.arc(x, y, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+              } else if (isTrackedFinger) {
+                // Tracked finger - special color
+                ctx.fillStyle = handedness === 'Left' ? '#00ff00' : '#0088ff';
+                ctx.beginPath();
+                ctx.arc(x, y, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+              } else {
+                // Regular fingertip
+                ctx.fillStyle = handedness === 'Left' ? '#4cff00' : '#00aaff';
+                ctx.beginPath();
+                ctx.arc(x, y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+              }
 
               // Label fingertip with name and coordinates
-              if (showDebug) {
+              if (showDebug || isTrackedFinger) {
                 const fingerNames = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
                 const fingerName = fingerNames[FINGERTIP_INDICES.indexOf(index)];
-                const label = `${handedness[0]}${fingerName[0]} (${Math.round(x)},${Math.round(y)})`;
 
+                let label = `${handedness[0]}${fingerName[0]}`;
+
+                // Add tile number for tracked fingers
+                if (isTrackedFinger) {
+                  const tileNum =
+                    (handedness === 'Left' && index === HAND_LANDMARKS.INDEX_FINGER_TIP) ? 0 :
+                    (handedness === 'Left' && index === HAND_LANDMARKS.MIDDLE_FINGER_TIP) ? 1 :
+                    (handedness === 'Right' && index === HAND_LANDMARKS.INDEX_FINGER_TIP) ? 2 :
+                    3;
+                  label += ` → Tile ${tileNum}`;
+                }
+
+                if (showDebug) {
+                  label += ` (${Math.round(x)},${Math.round(y)})`;
+                }
+
+                const labelWidth = showDebug ? 150 : 90;
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillRect(x + 15, y - 25, 120, 20);
-                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x + 15, y - 25, labelWidth, 20);
+                ctx.fillStyle = isTrackedFinger ? '#00ff00' : '#ffffff';
                 ctx.font = '12px monospace';
                 ctx.fillText(label, x + 20, y - 10);
               }

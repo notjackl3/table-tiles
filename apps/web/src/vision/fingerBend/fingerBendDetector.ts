@@ -14,8 +14,12 @@ export interface FingerBendState {
   finger: 'index' | 'middle';
   hand: 'Left' | 'Right';
   bendAmount: number;
-  isActive: boolean; // true when bend exceeds threshold
-  lastActivationTime: number;
+  previousBendAmount: number;
+  bendVelocity: number; // Rate of change in bend
+  peakBendAmount: number; // Peak bend in current motion
+  isInTapMotion: boolean; // Currently in a tap motion
+  tapMotionStartTime: number; // When tap motion started
+  lastTapTime: number;
 }
 
 /**
@@ -59,11 +63,14 @@ function calculateFingerBend(
 }
 
 export class FingerBendDetector {
-  private sensitivity: number = 0.3; // 0-1, lower = more sensitive
-  private cooldownMs: number = 100; // Minimum time between activations
+  private sensitivity: number = 0.15; // Minimum bend amount to consider as a tap
+  private velocityThreshold: number = 1; // Minimum bend velocity (change per second) to trigger tap
+  private cooldownMs: number = 100; // Minimum time between taps (reduced from 200ms for faster double-tapping)
+  private tapMotionTimeoutMs: number = 250; // Max time for tap motion before auto-completing (reduced from 300ms)
   private fingerStates: Map<number, FingerBendState> = new Map();
+  private lastTimestamp: number = 0;
 
-  constructor(sensitivity: number = 0.3, cooldownMs: number = 100) {
+  constructor(sensitivity: number = 0.25, cooldownMs: number = 100) {
     this.sensitivity = sensitivity;
     this.cooldownMs = cooldownMs;
   }
@@ -80,13 +87,35 @@ export class FingerBendDetector {
     this.cooldownMs = cooldownMs;
   }
 
+  setVelocityThreshold(velocityThreshold: number) {
+    this.velocityThreshold = Math.max(0, velocityThreshold);
+  }
+
+  getVelocityThreshold(): number {
+    return this.velocityThreshold;
+  }
+
+  setTapMotionTimeout(tapMotionTimeoutMs: number) {
+    this.tapMotionTimeoutMs = Math.max(0, tapMotionTimeoutMs);
+  }
+
+  getTapMotionTimeout(): number {
+    return this.tapMotionTimeoutMs;
+  }
+
+  getCooldown(): number {
+    return this.cooldownMs;
+  }
+
   /**
-   * Detect finger bends from hand landmarks
-   * Returns events for fingers that just crossed the threshold
+   * Detect finger tap motions from hand landmarks
+   * Returns events for fingers that just completed a tap motion
    */
   detect(hands: HandLandmarks[], timestamp: number): FingerBendEvent[] {
     const events: FingerBendEvent[] = [];
     const currentStates = new Map<number, FingerBendState>();
+    const deltaTime = this.lastTimestamp > 0 ? (timestamp - this.lastTimestamp) / 1000 : 0.016; // seconds
+    this.lastTimestamp = timestamp;
 
     // Process each hand
     for (const hand of hands) {
@@ -110,74 +139,150 @@ export class FingerBendDetector {
       );
 
       // Map to tiles:
-      // Left hand: index → 0, middle → 1
+      // Left hand: middle → 0, index → 1
       // Right hand: index → 2, middle → 3
-      const indexTile = handedness === 'Left' ? 0 : 2;
-      const middleTile = handedness === 'Left' ? 1 : 3;
+      const indexTile = handedness === 'Left' ? 1 : 2;
+      const middleTile = handedness === 'Left' ? 0 : 3;
 
       // Create state IDs (unique for each finger)
       const indexStateId = indexTile;
       const middleStateId = middleTile;
 
-      // Check index finger
-      const indexActive = indexBend > this.sensitivity;
-      const prevIndexState = this.fingerStates.get(indexStateId);
+      // Process index finger tap detection
+      const indexEvent = this.processFinger(
+        indexStateId,
+        indexBend,
+        deltaTime,
+        timestamp,
+        indexTile,
+        'index',
+        handedness
+      );
+      if (indexEvent) events.push(indexEvent);
 
-      currentStates.set(indexStateId, {
-        tile: indexTile,
-        finger: 'index',
-        hand: handedness,
-        bendAmount: indexBend,
-        isActive: indexActive,
-        lastActivationTime: prevIndexState?.lastActivationTime || 0
+      // Process middle finger tap detection
+      const middleEvent = this.processFinger(
+        middleStateId,
+        middleBend,
+        deltaTime,
+        timestamp,
+        middleTile,
+        'middle',
+        handedness
+      );
+      if (middleEvent) events.push(middleEvent);
+
+      // Store current states
+      currentStates.set(indexStateId, this.fingerStates.get(indexStateId)!);
+      currentStates.set(middleStateId, this.fingerStates.get(middleStateId)!);
+    }
+
+    // Clear states for fingers not currently visible
+    this.fingerStates = currentStates;
+
+    return events;
+  }
+
+  /**
+   * Process a single finger and detect tap motion
+   */
+  private processFinger(
+    stateId: number,
+    currentBend: number,
+    deltaTime: number,
+    timestamp: number,
+    tile: number,
+    finger: 'index' | 'middle',
+    hand: 'Left' | 'Right'
+  ): FingerBendEvent | null {
+    const prevState = this.fingerStates.get(stateId);
+
+    // Calculate bend velocity (change in bend per second)
+    const bendVelocity = prevState && deltaTime > 0
+      ? (currentBend - prevState.bendAmount) / deltaTime
+      : 0;
+
+    // Initialize or update state
+    if (!prevState) {
+      this.fingerStates.set(stateId, {
+        tile,
+        finger,
+        hand,
+        bendAmount: currentBend,
+        previousBendAmount: currentBend,
+        bendVelocity: 0,
+        peakBendAmount: currentBend,
+        isInTapMotion: false,
+        tapMotionStartTime: 0,
+        lastTapTime: 0
       });
+      return null;
+    }
 
-      // Trigger event if crossed threshold and not in cooldown
-      if (indexActive && (!prevIndexState || !prevIndexState.isActive)) {
-        if (!prevIndexState || timestamp - prevIndexState.lastActivationTime > this.cooldownMs) {
-          events.push({
-            tile: indexTile,
-            finger: 'index',
-            hand: handedness,
-            bendAmount: indexBend,
-            timestamp
-          });
-          currentStates.get(indexStateId)!.lastActivationTime = timestamp;
-        }
+    // Update state
+    prevState.previousBendAmount = prevState.bendAmount;
+    prevState.bendAmount = currentBend;
+    prevState.bendVelocity = bendVelocity;
+
+    // Tap detection logic:
+    // 1. Detect rapid increase in bend (finger bending quickly)
+    // 2. Track peak bend amount
+    // 3. Detect when bend decreases (finger straightening)
+    // 4. Trigger tap when we see the pattern: low -> rapid increase -> peak -> decrease
+
+    // Start of tap motion: rapid increase in bend
+    if (!prevState.isInTapMotion && bendVelocity > this.velocityThreshold && currentBend > 0.15) {
+      prevState.isInTapMotion = true;
+      prevState.tapMotionStartTime = timestamp;
+      prevState.peakBendAmount = currentBend;
+      console.log(`[FingerBendDetector] ${hand} ${finger} - TAP MOTION STARTED (velocity: ${bendVelocity.toFixed(2)}, bend: ${currentBend.toFixed(3)})`);
+    }
+
+    // In tap motion: track peak and detect completion
+    if (prevState.isInTapMotion) {
+      if (currentBend > prevState.peakBendAmount) {
+        prevState.peakBendAmount = currentBend;
       }
 
-      // Check middle finger
-      const middleActive = middleBend > this.sensitivity;
-      const prevMiddleState = this.fingerStates.get(middleStateId);
+      const motionDuration = timestamp - prevState.tapMotionStartTime;
+      const bendDecrease = prevState.peakBendAmount - currentBend;
 
-      currentStates.set(middleStateId, {
-        tile: middleTile,
-        finger: 'middle',
-        hand: handedness,
-        bendAmount: middleBend,
-        isActive: middleActive,
-        lastActivationTime: prevMiddleState?.lastActivationTime || 0
-      });
+      // Three ways to complete tap:
+      // 1. Finger straightening significantly (release)
+      // 2. Bend velocity becomes negative (finger moving back up)
+      // 3. Motion timeout (finger stayed bent too long, auto-complete)
+      const isReleasing = bendDecrease > 0.05 && bendVelocity < -1.0;
+      const isTimedOut = motionDuration > this.tapMotionTimeoutMs;
 
-      // Trigger event if crossed threshold and not in cooldown
-      if (middleActive && (!prevMiddleState || !prevMiddleState.isActive)) {
-        if (!prevMiddleState || timestamp - prevMiddleState.lastActivationTime > this.cooldownMs) {
-          events.push({
-            tile: middleTile,
-            finger: 'middle',
-            hand: handedness,
-            bendAmount: middleBend,
+      if (isReleasing || isTimedOut) {
+        // Check if peak was significant enough and cooldown has passed
+        if (prevState.peakBendAmount >= this.sensitivity &&
+            (timestamp - prevState.lastTapTime) > this.cooldownMs) {
+
+          const reason = isTimedOut ? 'timeout' : 'release';
+          console.log(`[FingerBendDetector] ${hand} ${finger} - TAP DETECTED! (peak: ${prevState.peakBendAmount.toFixed(3)}, reason: ${reason})`);
+
+          prevState.lastTapTime = timestamp;
+          prevState.isInTapMotion = false;
+          prevState.peakBendAmount = currentBend;
+
+          return {
+            tile,
+            finger,
+            hand,
+            bendAmount: prevState.peakBendAmount,
             timestamp
-          });
-          currentStates.get(middleStateId)!.lastActivationTime = timestamp;
+          };
+        } else {
+          // Reset motion without triggering tap (too weak or in cooldown)
+          console.log(`[FingerBendDetector] ${hand} ${finger} - Motion ended but not triggering (peak: ${prevState.peakBendAmount.toFixed(3)}, threshold: ${this.sensitivity})`);
+          prevState.isInTapMotion = false;
+          prevState.peakBendAmount = currentBend;
         }
       }
     }
 
-    // Update states
-    this.fingerStates = currentStates;
-
-    return events;
+    return null;
   }
 
   /**
@@ -192,5 +297,6 @@ export class FingerBendDetector {
    */
   reset() {
     this.fingerStates.clear();
+    this.lastTimestamp = 0;
   }
 }
