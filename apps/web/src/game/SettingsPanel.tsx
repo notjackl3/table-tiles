@@ -66,7 +66,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               Sensitivity
               <span className="setting-value">{sensitivity.toFixed(2)}</span>
             </div>
-            <div className="setting-description">Minimum bend amount to trigger tap (lower = easier)</div>
             <input
               type="range"
               min="0.05"
@@ -76,10 +75,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               onChange={(e) => handleSensitivityChange(parseFloat(e.target.value))}
               className="slider"
             />
-            <div className="slider-labels">
-              <span>Easy (0.05)</span>
-              <span>Hard (0.5)</span>
-            </div>
           </label>
         </div>
 
@@ -90,7 +85,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               Velocity Threshold
               <span className="setting-value">{velocityThreshold.toFixed(1)}</span>
             </div>
-            <div className="setting-description">Speed required for tap detection (lower = slower taps work)</div>
             <input
               type="range"
               min="0.5"
@@ -100,10 +94,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               onChange={(e) => handleVelocityThresholdChange(parseFloat(e.target.value))}
               className="slider"
             />
-            <div className="slider-labels">
-              <span>Slow (0.5)</span>
-              <span>Fast (3.0)</span>
-            </div>
           </label>
         </div>
 
@@ -114,7 +104,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               Cooldown
               <span className="setting-value">{cooldown}ms</span>
             </div>
-            <div className="setting-description">Time between taps (lower = faster double-taps)</div>
             <input
               type="range"
               min="50"
@@ -124,10 +113,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               onChange={(e) => handleCooldownChange(parseInt(e.target.value))}
               className="slider"
             />
-            <div className="slider-labels">
-              <span>Fast (50ms)</span>
-              <span>Slow (300ms)</span>
-            </div>
           </label>
         </div>
 
@@ -138,7 +123,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               Tap Timeout
               <span className="setting-value">{tapMotionTimeout}ms</span>
             </div>
-            <div className="setting-description">Max duration of tap motion (higher = more time to release)</div>
             <input
               type="range"
               min="100"
@@ -148,10 +132,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
               onChange={(e) => handleTapMotionTimeoutChange(parseInt(e.target.value))}
               className="slider"
             />
-            <div className="slider-labels">
-              <span>Quick (100ms)</span>
-              <span>Slow (500ms)</span>
-            </div>
           </label>
         </div>
       </div>
@@ -181,7 +161,7 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
                 </div>
                 <div className="finger-state-info">
                   <span className={`status-badge ${state.isInTapMotion ? 'active' : ''}`}>
-                    {state.isInTapMotion ? '🟢 Tapping' : '⚪ Resting'}
+                    {state.isInTapMotion ? 'Tapping' : 'Resting'}
                   </span>
                   <span className="velocity">
                     v: {state.bendVelocity.toFixed(1)}

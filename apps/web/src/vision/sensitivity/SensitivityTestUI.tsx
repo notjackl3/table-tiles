@@ -497,7 +497,7 @@ export function SensitivityTestUI({ videoRef, onComplete, onCancel, visionLoop }
           <button
             onClick={handleSave}
             className="button button-primary"
-            style={{ fontSize: '1.1rem', padding: '14px 32px' }}
+            style={{ fontSize: '1.1rem', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             Save & Continue
           </button>
@@ -505,7 +505,7 @@ export function SensitivityTestUI({ videoRef, onComplete, onCancel, visionLoop }
           <button
             onClick={onCancel}
             className="button"
-            style={{ fontSize: '1.1rem', padding: '14px 32px' }}
+            style={{ fontSize: '1.1rem', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             Cancel
           </button>

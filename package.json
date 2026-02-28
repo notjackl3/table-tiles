@@ -13,10 +13,15 @@
     "dev:web": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces",
     "build:web": "npm run build --workspace=apps/web",
-    "build:api": "npm run build --workspace=services/api"
+    "build:api": "npm run build --workspace=services/api",
+    "generate:sounds": "tsx scripts/generateSoundEffects.ts"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
   }
 }

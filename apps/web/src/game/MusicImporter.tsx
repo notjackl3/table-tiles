@@ -1,0 +1,406 @@
+/**
+ * Music Importer Component
+ * Allows users to import MIDI files or sheet music images
+ */
+
+import { useState, useRef } from 'react';
+import {
+  importFromMIDI,
+  importFromSheetMusic,
+  saveBeatmapToAPI,
+  saveBeatmapToLocalStorage,
+  type SongImportOptions,
+  type ImportResult
+} from './import/songGenerator';
+import type { ExtractionStrategy } from './import/melodyExtractor';
+import { getDefaultOMRConfig, checkOMRServiceAvailability, OMR_SETUP_INSTRUCTIONS } from './import/omrService';
+
+interface MusicImporterProps {
+  onImportComplete?: (songId: string) => void;
+}
+
+export function MusicImporter({ onImportComplete }: MusicImporterProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [importType, setImportType] = useState<'midi' | 'image'>('midi');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [omrAvailable, setOmrAvailable] = useState<boolean | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Form state
+  const [songName, setSongName] = useState('');
+  const [artistName, setArtistName] = useState('');
+  const [extractionStrategy, setExtractionStrategy] = useState<ExtractionStrategy>('melody-line');
+  const [manualBPM, setManualBPM] = useState<number | undefined>();
+
+  // Check OMR availability on mount
+  const checkOMRAvailability = async () => {
+    const config = getDefaultOMRConfig();
+    const available = await checkOMRServiceAvailability(config);
+    setOmrAvailable(available);
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate inputs
+    if (!songName.trim()) {
+      setError('Please enter a song name');
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+    setImportResult(null);
+
+    try {
+      const options: SongImportOptions = {
+        name: songName.trim(),
+        artist: artistName.trim() || 'Unknown Artist',
+        extractionStrategy,
+        minNoteSpacing: 400,
+        manualBPM: manualBPM || undefined
+      };
+
+      let result: ImportResult;
+
+      if (importType === 'midi') {
+        result = await importFromMIDI(file, options);
+      } else {
+        const omrConfig = getDefaultOMRConfig();
+        result = await importFromSheetMusic(file, options, omrConfig);
+      }
+
+      setImportResult(result);
+
+      // Save to localStorage for immediate availability
+      saveBeatmapToLocalStorage(result.beatmap);
+
+      // Save to backend API (permanent storage in songs folder)
+      const saveResult = await saveBeatmapToAPI(result.beatmap);
+
+      if (!saveResult.success) {
+        console.warn('[Music Importer] API save failed:', saveResult.error);
+        // Don't throw - song is still in localStorage
+      }
+
+      // Notify parent to refresh song list
+      if (onImportComplete) {
+        onImportComplete(result.beatmap.id);
+      }
+
+      console.log('[Music Importer] Import successful:', result);
+    } catch (err: any) {
+      console.error('[Music Importer] Import failed:', err);
+      setError(err.message || 'Failed to import music');
+    } finally {
+      setIsProcessing(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleImportTypeChange = async (type: 'midi' | 'image') => {
+    setImportType(type);
+    if (type === 'image' && omrAvailable === null) {
+      await checkOMRAvailability();
+    }
+  };
+
+  return (
+    <div style={{
+      background: '#f5f1e8',
+      border: '3px solid #d4c7b0',
+      borderRadius: '8px',
+      overflow: 'hidden',
+      marginBottom: '16px'
+    }}>
+      {/* Header - Always visible */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        style={{
+          width: '100%',
+          padding: '16px',
+          background: '#d4c7b0',
+          color: '#5a4d3a',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '1rem',
+          fontWeight: 'bold',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <span>Import Music</span>
+        <span style={{ fontSize: '1.2rem' }}>{isExpanded ? 'v' : '>'}</span>
+      </button>
+
+      {/* Content - Expandable */}
+      {isExpanded && (
+        <div style={{ padding: '16px' }}>
+          {/* Import Type Selection */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', color: '#5a4d3a', fontWeight: 'bold' }}>
+              Import From:
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => handleImportTypeChange('midi')}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: importType === 'midi' ? '#6fa87a' : '#8b7355',
+                  color: '#000000',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                MIDI File
+              </button>
+              <button
+                onClick={() => handleImportTypeChange('image')}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: importType === 'image' ? '#6fa87a' : '#8b7355',
+                  color: '#000000',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                Sheet Music Image
+              </button>
+            </div>
+          </div>
+
+          {/* OMR Warning */}
+          {importType === 'image' && omrAvailable === false && (
+            <div style={{
+              padding: '12px',
+              background: '#fff4e6',
+              border: '2px solid #d4a547',
+              borderRadius: '4px',
+              marginBottom: '16px',
+              fontSize: '0.85rem',
+              color: '#5a4d3a'
+            }}>
+              <strong>OMR Service Not Available</strong>
+              <p style={{ margin: '8px 0 0 0', fontSize: '0.8rem' }}>
+                Sheet music transcription requires an OMR service. Please use MIDI files or set up an OMR service.
+              </p>
+              <details style={{ marginTop: '8px', fontSize: '0.75rem' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Setup Instructions</summary>
+                <pre style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  background: '#f5f1e8',
+                  borderRadius: '4px',
+                  overflow: 'auto',
+                  fontSize: '0.7rem'
+                }}>
+                  {OMR_SETUP_INSTRUCTIONS}
+                </pre>
+              </details>
+            </div>
+          )}
+
+          {/* Song Metadata */}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
+              Song Name *
+            </label>
+            <input
+              type="text"
+              value={songName}
+              onChange={(e) => setSongName(e.target.value)}
+              placeholder="Enter song name"
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '2px solid #d4c7b0',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
+              Artist
+            </label>
+            <input
+              type="text"
+              value={artistName}
+              onChange={(e) => setArtistName(e.target.value)}
+              placeholder="Enter artist name"
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '2px solid #d4c7b0',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {/* Extraction Strategy */}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
+              Polyphony Handling
+            </label>
+            <select
+              value={extractionStrategy}
+              onChange={(e) => setExtractionStrategy(e.target.value as ExtractionStrategy)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '2px solid #d4c7b0',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box',
+                background: 'white'
+              }}
+            >
+              <option value="melody-line">Extract Melody (Smart)</option>
+              <option value="highest-note">Highest Note Only</option>
+              <option value="smart-lanes">Smart Lane Assignment</option>
+              <option value="round-robin">Round Robin Distribution</option>
+            </select>
+          </div>
+
+          {/* Manual BPM */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
+              Manual BPM (Optional)
+            </label>
+            <input
+              type="number"
+              value={manualBPM || ''}
+              onChange={(e) => setManualBPM(e.target.value ? parseInt(e.target.value) : undefined)}
+              placeholder="Auto-detect from file"
+              min="60"
+              max="200"
+              style={{
+                width: '100%',
+                padding: '8px',
+                border: '2px solid #d4c7b0',
+                borderRadius: '4px',
+                fontSize: '0.9rem',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {/* File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={importType === 'midi' ? '.mid,.midi' : 'image/*,.pdf'}
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+          />
+
+          {/* Import Button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing || !songName.trim() || (importType === 'image' && omrAvailable === false)}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: isProcessing ? '#8b7355' : '#6fa87a',
+              color: '#000000',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isProcessing ? 'wait' : 'pointer',
+              fontSize: '1rem',
+              fontWeight: 'bold',
+              opacity: !songName.trim() ? 0.5 : 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {isProcessing ? 'Processing...' : `Select ${importType === 'midi' ? 'MIDI' : 'Image'} File`}
+          </button>
+
+          {/* Error Display */}
+          {error && (
+            <div style={{
+              marginTop: '12px',
+              padding: '12px',
+              background: '#ffe6e6',
+              border: '2px solid #c75450',
+              borderRadius: '4px',
+              color: '#5a4d3a',
+              fontSize: '0.85rem'
+            }}>
+              <strong>Error:</strong> {error}
+            </div>
+          )}
+
+          {/* Success Display */}
+          {importResult && (
+            <div style={{
+              marginTop: '12px',
+              padding: '12px',
+              background: '#e6f7e9',
+              border: '2px solid #6fa87a',
+              borderRadius: '4px',
+              color: '#5a4d3a',
+              fontSize: '0.85rem'
+            }}>
+              <strong>Import Successful!</strong>
+              <div style={{ marginTop: '8px', fontSize: '0.8rem' }}>
+                <div>Notes: {importResult.stats.originalNoteCount} → {importResult.stats.finalNoteCount}</div>
+                <div>Retention: {importResult.stats.retentionRate.toFixed(1)}%</div>
+                <div>Avg Spacing: {importResult.stats.averageSpacing}ms</div>
+                <div>Suggested Difficulty: {importResult.stats.suggestedDifficulty}</div>
+                <div>Lane Distribution: {importResult.stats.laneDistribution.join(', ')}</div>
+                <div>Note Variety: {importResult.stats.noteVariety.uniqueNotes} unique notes</div>
+                <div>Max Repetition: {importResult.stats.noteVariety.longestRepetition} consecutive</div>
+              </div>
+
+              {importResult.warnings.length > 0 && (
+                <details style={{ marginTop: '8px', fontSize: '0.75rem' }}>
+                  <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Warnings ({importResult.warnings.length})</summary>
+                  <ul style={{ margin: '4px 0', paddingLeft: '20px' }}>
+                    {importResult.warnings.map((warning, i) => (
+                      <li key={i}>{warning}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+
+              <div style={{
+                marginTop: '8px',
+                fontSize: '0.75rem',
+                color: '#6fa87a',
+                fontStyle: 'italic'
+              }}>
+                Saved permanently! Song is now available in the list above.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

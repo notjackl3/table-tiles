@@ -133,9 +133,12 @@ export function TestingPage() {
           top: '20px',
           left: '20px',
           zIndex: 1001,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        ← Back
+        Back
       </button>
 
       {cameraReady && (

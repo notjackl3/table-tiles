@@ -10,10 +10,10 @@ export function HomePage() {
         </p>
 
         <div className="button-group">
-          <Link to="/game" className="nav-link" style={{ background: '#8b7355', color: 'white', borderColor: '#7a6348' }}>
+          <Link to="/game" className="nav-link" style={{ background: '#8b7355', color: '#ffffff', borderColor: '#7a6348', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             Start Game
           </Link>
-          <Link to="/testing" className="nav-link">
+          <Link to="/testing" className="nav-link" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             Sensitivity Testing
           </Link>
         </div>

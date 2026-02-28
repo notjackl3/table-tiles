@@ -1,6 +1,9 @@
 import { useState, useRef } from 'react';
-import { AVAILABLE_SONGS, type SongMetadata, loadSong } from './songs/songLoader';
+import { getAvailableSongs, type SongMetadata, loadSong } from './songs/songLoader';
 import type { AudioEngine } from './audio/audioEngine';
+import { MusicImporter } from './MusicImporter';
+import { deleteSongFromAPI, deleteImportedSong } from './import/songGenerator';
+import { getHighScore } from './highScores';
 
 interface SongSelectionProps {
   selectedSongId: string | null;
@@ -9,9 +12,40 @@ interface SongSelectionProps {
 }
 
 export function SongSelection({ selectedSongId, onSelectSong, audioEngine }: SongSelectionProps) {
+  const [availableSongs, setAvailableSongs] = useState<SongMetadata[]>(getAvailableSongs());
   const [previewingSongId, setPreviewingSongId] = useState<string | null>(null);
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previewTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+  const handleImportComplete = (songId: string) => {
+    // Refresh the available songs list
+    setAvailableSongs(getAvailableSongs());
+    // Auto-select the newly imported song
+    onSelectSong(songId);
+  };
+
+  const handleDeleteSong = async (songId: string) => {
+    if (!confirm(`Are you sure you want to delete this song?`)) {
+      return;
+    }
+
+    // Delete from localStorage
+    deleteImportedSong(songId);
+
+    // Delete from API/file system
+    const result = await deleteSongFromAPI(songId);
+    if (!result.success) {
+      console.warn('[Song Delete] API delete failed:', result.error);
+    }
+
+    // Refresh song list
+    setAvailableSongs(getAvailableSongs());
+
+    // If deleted song was selected, clear selection
+    if (selectedSongId === songId) {
+      onSelectSong('');
+    }
+  };
 
   const stopPreview = () => {
     // Clear all scheduled note timeouts
@@ -63,13 +97,14 @@ export function SongSelection({ selectedSongId, onSelectSong, audioEngine }: Son
   return (
     <div style={{
       width: '320px',
-      height: '100%',
+      height: 'calc(100vh - 100px)', // Full viewport height minus header (100px)
+      maxHeight: 'calc(100vh - 100px)',
       background: '#ebe4d6',
       borderLeft: '3px solid #d4c7b0',
       display: 'flex',
       flexDirection: 'column',
       padding: '20px',
-      overflowY: 'auto'
+      overflow: 'hidden'
     }}>
       <h2 style={{
         margin: '0 0 20px 0',
@@ -77,35 +112,53 @@ export function SongSelection({ selectedSongId, onSelectSong, audioEngine }: Son
         fontSize: '1.5rem',
         fontWeight: 'bold',
         borderBottom: '2px solid #d4c7b0',
-        paddingBottom: '10px'
+        paddingBottom: '10px',
+        flexShrink: 0
       }}>
         Song Selection
       </h2>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {AVAILABLE_SONGS.map((song) => (
-          <SongCard
-            key={song.id}
-            song={song}
-            isSelected={selectedSongId === song.id}
-            isPreviewing={previewingSongId === song.id}
-            onSelect={() => onSelectSong(song.id)}
-            onPreview={() => playPreview(song.id)}
-            onStopPreview={stopPreview}
-          />
-        ))}
+      {/* Music Importer */}
+      <div style={{ flexShrink: 0 }}>
+        <MusicImporter onImportComplete={handleImportComplete} />
       </div>
 
-      {AVAILABLE_SONGS.length === 0 && (
-        <div style={{
-          padding: '20px',
-          textAlign: 'center',
-          color: '#8b7355',
-          fontStyle: 'italic'
-        }}>
-          No songs available
-        </div>
-      )}
+      {/* Scrollable song list */}
+      <div style={{
+        flex: '1 1 auto',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        marginTop: '16px',
+        paddingRight: '4px',
+        minHeight: 0,
+        maxHeight: '100%'
+      }}>
+        {availableSongs.length === 0 ? (
+          <div style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: '#8b7355',
+            fontStyle: 'italic'
+          }}>
+            No songs available
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '8px' }}>
+            {availableSongs.map((song) => (
+              <SongCard
+                key={song.id}
+                song={song}
+                isSelected={selectedSongId === song.id}
+                isPreviewing={previewingSongId === song.id}
+                onSelect={() => onSelectSong(song.id)}
+                onPreview={() => playPreview(song.id)}
+                onStopPreview={stopPreview}
+                onDelete={() => handleDeleteSong(song.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -117,9 +170,15 @@ interface SongCardProps {
   onSelect: () => void;
   onPreview: () => void;
   onStopPreview: () => void;
+  onDelete: () => void;
 }
 
-function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopPreview }: SongCardProps) {
+function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopPreview, onDelete }: SongCardProps) {
+  // Built-in songs that cannot be deleted
+  const builtInSongs = ['simple-melody', 'river-flows-in-you'];
+  const canDelete = !builtInSongs.includes(song.id);
+  const highScore = getHighScore(song.id);
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case 'easy': return '#6fa87a';
@@ -167,7 +226,7 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
       }}>
         <span style={{
           background: getDifficultyColor(song.difficulty),
-          color: 'white',
+          color: '#ffffff',
           padding: '2px 8px',
           borderRadius: '4px',
           fontWeight: 'bold',
@@ -186,18 +245,40 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
         </span>
       </div>
 
+      {/* High Score Display */}
+      {highScore && (
+        <div style={{
+          marginTop: '8px',
+          padding: '6px 8px',
+          background: '#f5f1e8',
+          border: '2px solid #d4a547',
+          borderRadius: '4px',
+          fontSize: '0.85rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span style={{ color: '#5a4d3a', fontWeight: 'bold' }}>
+            High Score:
+          </span>
+          <span style={{ color: '#d4a547', fontWeight: 'bold' }}>
+            {highScore.score.toLocaleString()}
+          </span>
+        </div>
+      )}
+
       {isSelected && (
         <div style={{
           marginTop: '8px',
           padding: '8px',
           background: '#6fa87a',
-          color: 'white',
+          color: '#ffffff',
           borderRadius: '4px',
           textAlign: 'center',
           fontSize: '0.85rem',
           fontWeight: 'bold'
         }}>
-          ✓ Selected
+          Selected
         </div>
       )}
 
@@ -210,14 +291,17 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
             flex: 1,
             padding: '8px',
             background: isSelected ? '#8b7355' : '#6fa87a',
-            color: 'white',
+            color: '#ffffff',
             border: 'none',
             borderRadius: '4px',
             cursor: isSelected ? 'default' : 'pointer',
             fontSize: '0.85rem',
             fontWeight: 'bold',
             opacity: isSelected ? 0.6 : 1,
-            transition: 'opacity 0.2s'
+            transition: 'opacity 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
           onMouseEnter={(e) => {
             if (!isSelected) {
@@ -239,13 +323,16 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
             flex: 1,
             padding: '8px',
             background: isPreviewing ? '#c75450' : '#5a4d3a',
-            color: 'white',
+            color: '#ffffff',
             border: 'none',
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '0.85rem',
             fontWeight: 'bold',
-            transition: 'opacity 0.2s'
+            transition: 'opacity 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.opacity = '0.8';
@@ -254,9 +341,40 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
             e.currentTarget.style.opacity = '1';
           }}
         >
-          {isPreviewing ? '⏹ Stop' : '▶ Preview'}
+          {isPreviewing ? 'Stop' : 'Preview'}
         </button>
       </div>
+
+      {/* Delete button for imported songs */}
+      {canDelete && (
+        <button
+          onClick={onDelete}
+          style={{
+            width: '100%',
+            padding: '6px',
+            background: '#c75450',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '0.75rem',
+            fontWeight: 'bold',
+            marginTop: '4px',
+            transition: 'opacity 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.8';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          Delete
+        </button>
+      )}
     </div>
   );
 }

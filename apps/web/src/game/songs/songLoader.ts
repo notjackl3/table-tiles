@@ -7,6 +7,8 @@ import { validateBeatmapSpacing } from '../engine/beatmap';
 import { noteToFrequency } from '../audio/noteConverter';
 import simpleMelodyData from './simpleMelody.json';
 import riverFlowsInYouData from './riverFlowsInYou.json';
+import somethingJustLikeThisData from './something-just-like-this.json';
+import { getAllImportedSongs } from '../import/songGenerator';
 
 export interface SongMetadata {
   id: string;
@@ -17,8 +19,8 @@ export interface SongMetadata {
   difficulty: 'easy' | 'medium' | 'hard';
 }
 
-// Available songs
-export const AVAILABLE_SONGS: SongMetadata[] = [
+// Built-in songs
+const BUILTIN_SONGS: SongMetadata[] = [
   {
     id: 'simple-melody',
     name: 'Simple Melody',
@@ -34,8 +36,37 @@ export const AVAILABLE_SONGS: SongMetadata[] = [
     bpm: 72,
     duration: 45000,
     difficulty: 'medium'
+  },
+  {
+    id: 'something-just-like-this',
+    name: 'Something Just Like This',
+    artist: 'The Chainsmokers & Coldplay',
+    bpm: 104,
+    duration: 18500,
+    difficulty: 'easy'
   }
 ];
+
+/**
+ * Get all available songs (built-in + imported)
+ */
+export function getAvailableSongs(): SongMetadata[] {
+  const importedSongs = getAllImportedSongs();
+
+  const importedMetadata: SongMetadata[] = importedSongs.map(song => ({
+    id: song.id,
+    name: song.name,
+    artist: song.artist || 'Unknown Artist',
+    bpm: song.bpm,
+    duration: song.duration,
+    difficulty: 'medium' as const // Default difficulty for imported songs
+  }));
+
+  return [...BUILTIN_SONGS, ...importedMetadata];
+}
+
+// Available songs (dynamically computed)
+export const AVAILABLE_SONGS: SongMetadata[] = getAvailableSongs();
 
 /**
  * Load a song beatmap by ID
@@ -43,6 +74,7 @@ export const AVAILABLE_SONGS: SongMetadata[] = [
 export function loadSong(songId: string): Beatmap {
   let beatmap: Beatmap;
 
+  // Check built-in songs first
   switch (songId) {
     case 'simple-melody':
       beatmap = simpleMelodyData as Beatmap;
@@ -50,8 +82,19 @@ export function loadSong(songId: string): Beatmap {
     case 'river-flows-in-you':
       beatmap = riverFlowsInYouData as Beatmap;
       break;
+    case 'something-just-like-this':
+      beatmap = somethingJustLikeThisData as Beatmap;
+      break;
     default:
-      throw new Error(`Unknown song: ${songId}`);
+      // Try loading from imported songs
+      const importedSongs = getAllImportedSongs();
+      const importedSong = importedSongs.find(s => s.id === songId);
+
+      if (importedSong) {
+        beatmap = importedSong;
+      } else {
+        throw new Error(`Unknown song: ${songId}`);
+      }
   }
 
   // Convert note names to frequencies if needed

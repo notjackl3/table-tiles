@@ -11,6 +11,7 @@ export interface GameLoopConfig {
   onScoreUpdate?: (stats: any) => void;
   onGameOver?: (stats: any) => void;
   onHit?: (lane: number, quality: string, noteFrequency?: number) => void;
+  onComboChange?: (combo: number, quality: string) => void; // Called when combo changes
 }
 
 export class GameLoop {
@@ -162,6 +163,11 @@ export class GameLoop {
       // Notify about successful hit
       if (this.config.onHit) {
         this.config.onHit(tap.lane, hitResult.quality, tile.noteFrequency);
+      }
+
+      // Notify about combo change
+      if (this.config.onComboChange) {
+        this.config.onComboChange(stats.combo, hitResult.quality);
       }
     } else {
       console.log('[GameLoop] Hit quality was miss, not processing');

@@ -177,9 +177,9 @@ export function GameCanvas({
         const heartX = width - 40 - i * 35;
         const heartY = 30;
         if (i < lives) {
-          ctx.fillText('❤️', heartX, heartY);
+          ctx.fillText('♥', heartX, heartY);
         } else {
-          ctx.fillText('🖤', heartX, heartY);
+          ctx.fillText('♡', heartX, heartY);
         }
       }
 
@@ -212,20 +212,14 @@ export function GameCanvas({
         for (const hand of hands) {
           const { landmarks, handedness } = hand;
 
-          // Draw connections (bones)
+          // Draw connections (bones) - Only index and middle fingers
           const connections = [
-            // Thumb
-            [0, 1], [1, 2], [2, 3], [3, 4],
             // Index
             [0, 5], [5, 6], [6, 7], [7, 8],
             // Middle
             [0, 9], [9, 10], [10, 11], [11, 12],
-            // Ring
-            [0, 13], [13, 14], [14, 15], [15, 16],
-            // Pinky
-            [0, 17], [17, 18], [18, 19], [19, 20],
-            // Palm
-            [5, 9], [9, 13], [13, 17]
+            // Palm connection between index and middle
+            [5, 9]
           ];
 
           // Hand-specific colors
@@ -245,8 +239,16 @@ export function GameCanvas({
             }
           }
 
-          // Draw landmarks
+          // Draw landmarks - Only for index and middle fingers
+          // Index finger landmarks: 5 (MCP), 6 (PIP), 7 (DIP), 8 (TIP)
+          // Middle finger landmarks: 9 (MCP), 10 (PIP), 11 (DIP), 12 (TIP)
+          // Wrist: 0
+          const allowedLandmarks = [0, 5, 6, 7, 8, 9, 10, 11, 12];
+
           landmarks.forEach((lm, index) => {
+            // Skip landmarks that aren't index or middle finger
+            if (!allowedLandmarks.includes(index)) return;
+
             const x = lm.x * canvas.width;
             const y = lm.y * canvas.height;
 
@@ -333,8 +335,8 @@ export function GameCanvas({
               ctx.strokeStyle = '#ffffff';
               ctx.lineWidth = 2;
               ctx.stroke();
-            } else if ([5, 9, 13, 17].includes(index)) {
-              // Knuckles
+            } else if ([5, 9].includes(index)) {
+              // Knuckles (index and middle finger MCP joints only)
               ctx.fillStyle = handColor;
               ctx.beginPath();
               ctx.arc(x, y, 7, 0, Math.PI * 2);
@@ -442,20 +444,19 @@ export function GameCanvas({
           }}
         >
           <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '14px' }}>
-            🎯 Hand Tracking Debug Info
+            Hand Tracking Debug Info
           </div>
           <div>
-            🟢 <strong style={{ color: '#4cff00' }}>Green</strong> = Left Hand | 🔵{' '}
-            <strong style={{ color: '#00aaff' }}>Blue</strong> = Right Hand
+            <strong style={{ color: '#4cff00' }}>Green</strong> = Left Hand | <strong style={{ color: '#00aaff' }}>Blue</strong> = Right Hand
           </div>
           <div>
-            🔴 <strong style={{ color: '#ff4444' }}>Red Dots</strong> = Fingertips
+            <strong style={{ color: '#ff4444' }}>Red Dots</strong> = Fingertips
           </div>
           <div>
-            🟢 <strong style={{ color: '#00ff00' }}>Green Dots</strong> = Knuckles
+            <strong style={{ color: '#00ff00' }}>Green Dots</strong> = Knuckles
           </div>
           <div>
-            ⚡ <strong style={{ color: '#ffff00' }}>Yellow Flash</strong> = Tap Detected!
+            <strong style={{ color: '#ffff00' }}>Yellow Flash</strong> = Tap Detected!
           </div>
           <div style={{ marginTop: '8px', fontSize: '12px', color: '#aaa' }}>
             Tap your table surface to play the game

@@ -1,0 +1,194 @@
+{
+  "id": "something-just-like-this",
+  "name": "Something Just Like This",
+  "artist": "The Chainsmokers & Coldplay",
+  "bpm": 104,
+  "duration": 18500,
+  "notes": [
+    {
+      "lane": 2,
+      "time": 0,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 1000,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 1500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 2000,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 2500,
+      "note": "G3"
+    },
+    {
+      "lane": 2,
+      "time": 3000,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 3500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 4000,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 4500,
+      "note": "E4"
+    },
+    {
+      "lane": 2,
+      "time": 5000,
+      "note": "C#4"
+    },
+    {
+      "lane": 1,
+      "time": 5500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 6000,
+      "note": "A3"
+    },
+    {
+      "lane": 1,
+      "time": 6500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 7000,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 7500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 8000,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 8500,
+      "note": "G3"
+    },
+    {
+      "lane": 2,
+      "time": 9000,
+      "note": "D3"
+    },
+    {
+      "lane": 1,
+      "time": 9500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 10000,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 10500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 11000,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 11500,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 12000,
+      "note": "D4"
+    },
+    {
+      "lane": 3,
+      "time": 12500,
+      "note": "F#4"
+    },
+    {
+      "lane": 2,
+      "time": 13000,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 13500,
+      "note": "F#4"
+    },
+    {
+      "lane": 2,
+      "time": 14000,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 14500,
+      "note": "G4"
+    },
+    {
+      "lane": 2,
+      "time": 15000,
+      "note": "A3"
+    },
+    {
+      "lane": 1,
+      "time": 15500,
+      "note": "F#4"
+    },
+    {
+      "lane": 2,
+      "time": 16000,
+      "note": "E4"
+    },
+    {
+      "lane": 3,
+      "time": 16500,
+      "note": "E4"
+    },
+    {
+      "lane": 2,
+      "time": 17000,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 17500,
+      "note": "F#4"
+    },
+    {
+      "lane": 2,
+      "time": 18000,
+      "note": "D4"
+    }
+  ]
+}

@@ -13,6 +13,11 @@ export class AudioEngine {
   private wetGain: GainNode | null = null;
   private enabled = true;
 
+  // Preloaded sound effects
+  private soundEffects: Map<string, AudioBuffer> = new Map();
+  private lastComboAnnouncement = 0;
+  private celebrationSounds = ['awesome', 'perfect', 'boom', 'yeah', 'on-fire'];
+
   // Note frequencies for 4 lanes (C4, E4, G4, B4)
   private laneFrequencies = [261.63, 329.63, 392.0, 493.88];
 
@@ -34,7 +39,7 @@ export class AudioEngine {
 
     // Create master gain
     this.masterGain = this.audioContext.createGain();
-    this.masterGain.gain.value = 0.3; // Master volume
+    this.masterGain.gain.value = 0.65; // Master volume (increased for better audibility of imported MIDI)
     this.masterGain.connect(this.audioContext.destination);
 
     // Create reverb chain (dry/wet mix)
@@ -53,6 +58,131 @@ export class AudioEngine {
 
     // Generate impulse response for reverb
     await this.createImpulseResponse();
+
+    // Preload sound effects
+    await this.loadSoundEffects();
+  }
+
+  /**
+   * Load all sound effects from the public/sounds directory
+   */
+  private async loadSoundEffects() {
+    if (!this.audioContext) return;
+
+    const soundFiles = [
+      'game-start.mp3',
+      'game-start-alt.mp3',
+      'streak-2.mp3',
+      'streak-3.mp3',
+      'streak-4.mp3',
+      'streak-5.mp3',
+      'streak-6.mp3',
+      'combo-10.mp3',
+      'combo-15.mp3',
+      'combo-20.mp3',
+      'combo-25.mp3',
+      'awesome.mp3',
+      'perfect.mp3',
+      'boom.mp3',
+      'yeah.mp3',
+      'on-fire.mp3'
+    ];
+
+    for (const filename of soundFiles) {
+      try {
+        const response = await fetch(`/sounds/${filename}`);
+        if (!response.ok) {
+          console.warn(`Could not load sound effect: ${filename}`);
+          continue;
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+
+        // Store with name without extension
+        const name = filename.replace('.mp3', '');
+        this.soundEffects.set(name, audioBuffer);
+        console.log(`✓ Loaded sound effect: ${name}`);
+      } catch (error) {
+        console.warn(`Failed to load sound effect ${filename}:`, error);
+      }
+    }
+  }
+
+  /**
+   * Play a preloaded sound effect
+   */
+  private playSoundEffect(name: string, volume: number = 1.0) {
+    if (!this.enabled || !this.audioContext || !this.masterGain) return;
+
+    const buffer = this.soundEffects.get(name);
+    if (!buffer) {
+      console.warn(`Sound effect not found: ${name}`);
+      return;
+    }
+
+    const source = this.audioContext.createBufferSource();
+    const gainNode = this.audioContext.createGain();
+
+    source.buffer = buffer;
+    gainNode.gain.value = volume;
+
+    source.connect(gainNode);
+    gainNode.connect(this.masterGain);
+
+    source.start(0);
+  }
+
+  /**
+   * Play game start announcement
+   */
+  playGameStartSound() {
+    // Randomly choose between two start sounds
+    const sound = Math.random() > 0.5 ? 'game-start' : 'game-start-alt';
+    this.playSoundEffect(sound, 0.8);
+  }
+
+  /**
+   * Play streak announcement (British football announcer style)
+   * Called for every hit to announce streaks 2-6
+   */
+  playStreakAnnouncement(streak: number) {
+    // Play announcements for streaks 2-6
+    if (streak >= 2 && streak <= 6) {
+      this.playSoundEffect(`streak-${streak}`, 0.95);
+    }
+  }
+
+  /**
+   * Play combo announcement at larger milestones (10, 15, 20, 25)
+   */
+  playComboMilestone(combo: number) {
+    const now = Date.now();
+
+    // Don't announce combos too frequently (at least 2 seconds apart)
+    if (now - this.lastComboAnnouncement < 2000) return;
+
+    // Announce at specific milestones (larger milestones only)
+    const milestones = [10, 15, 20, 25];
+    const milestone = milestones.find(m => combo === m);
+
+    if (milestone) {
+      this.playSoundEffect(`combo-${milestone}`, 0.9);
+      this.lastComboAnnouncement = now;
+    }
+  }
+
+  /**
+   * Play a random celebration sound for perfect hits
+   */
+  playRandomCelebration() {
+    // Only play celebration sounds occasionally (20% chance)
+    if (Math.random() > 0.2) return;
+
+    const sound = this.celebrationSounds[
+      Math.floor(Math.random() * this.celebrationSounds.length)
+    ];
+    this.playSoundEffect(sound, 0.7);
   }
 
   /**

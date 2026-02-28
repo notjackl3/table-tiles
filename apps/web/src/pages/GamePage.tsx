@@ -9,6 +9,7 @@ import { HAND_LANDMARKS } from '../vision/handTracker';
 import { SettingsPanel } from '../game/SettingsPanel';
 import { SongSelection } from '../game/SongSelection';
 import { loadSong } from '../game/songs/songLoader';
+import { saveHighScore, getHighScore } from '../game/highScores';
 
 export function GamePage() {
   const navigate = useNavigate();
@@ -243,6 +244,11 @@ export function GamePage() {
     audioEngine.initialize();
     audioEngine.resume();
 
+    // Play game start announcement
+    setTimeout(() => {
+      audioEngine.playGameStartSound();
+    }, 100); // Small delay to ensure audio is initialized
+
     // Create game loop
     const gameLoop = new GameLoop({
       canvasWidth: 800,
@@ -254,7 +260,21 @@ export function GamePage() {
       },
       onGameOver: (stats) => {
         console.log('[GamePage] Game over:', stats);
-        alert(`Game Over! Score: ${stats.score}`);
+
+        // Save high score
+        if (selectedSongId) {
+          const isNewHighScore = saveHighScore(selectedSongId, stats.score, stats.accuracy);
+
+          if (isNewHighScore) {
+            alert(`Game Over!\nNew High Score: ${stats.score.toLocaleString()}\nAccuracy: ${(stats.accuracy * 100).toFixed(1)}%`);
+          } else {
+            const currentHighScore = getHighScore(selectedSongId);
+            alert(`Game Over!\nScore: ${stats.score.toLocaleString()}\nAccuracy: ${(stats.accuracy * 100).toFixed(1)}%\n\nHigh Score: ${currentHighScore?.score.toLocaleString() || 0}`);
+          }
+        } else {
+          alert(`Game Over! Score: ${stats.score}`);
+        }
+
         setGameStarted(false);
       },
       onHit: (lane, quality, noteFrequency) => {
@@ -268,6 +288,18 @@ export function GamePage() {
 
         // Play melodic sound with noteFrequency if available
         audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
+      },
+      onComboChange: (combo, quality) => {
+        // Play streak announcements (British announcer for streaks 2-6)
+        audioEngine.playStreakAnnouncement(combo);
+
+        // Play combo milestone sounds (10, 15, 20, 25)
+        audioEngine.playComboMilestone(combo);
+
+        // Play celebration sound for perfect hits (occasionally)
+        if (quality === 'perfect') {
+          audioEngine.playRandomCelebration();
+        }
       }
     });
 
@@ -457,14 +489,11 @@ export function GamePage() {
         const { landmarks, handedness } = hand;
         const handColor = handedness === 'Left' ? '#8b7355' : '#5a4d3a';
 
-        // Draw connections
+        // Draw connections - Only index and middle fingers
         const connections = [
-          [0, 1], [1, 2], [2, 3], [3, 4],
-          [0, 5], [5, 6], [6, 7], [7, 8],
-          [0, 9], [9, 10], [10, 11], [11, 12],
-          [0, 13], [13, 14], [14, 15], [15, 16],
-          [0, 17], [17, 18], [18, 19], [19, 20],
-          [5, 9], [9, 13], [13, 17]
+          [0, 5], [5, 6], [6, 7], [7, 8],  // Index
+          [0, 9], [9, 10], [10, 11], [11, 12],  // Middle
+          [5, 9]  // Palm connection
         ];
 
         ctx.strokeStyle = handColor;
@@ -481,12 +510,20 @@ export function GamePage() {
           }
         }
 
-        // Draw landmarks
+        // Draw landmarks - Only for index and middle fingers
+        // Index finger: 5 (MCP), 6 (PIP), 7 (DIP), 8 (TIP)
+        // Middle finger: 9 (MCP), 10 (PIP), 11 (DIP), 12 (TIP)
+        // Wrist: 0
+        const allowedLandmarks = [0, 5, 6, 7, 8, 9, 10, 11, 12];
+
         landmarks.forEach((lm, index) => {
+          // Skip landmarks that aren't index or middle finger
+          if (!allowedLandmarks.includes(index)) return;
+
           const x = lm.x * canvas.width;
           const y = lm.y * canvas.height;
 
-          const isTip = [4, 8, 12, 16, 20].includes(index);
+          const isTip = [8, 12].includes(index);  // Only index and middle tips
 
           if (isTip) {
             ctx.fillStyle = handColor;
@@ -551,6 +588,9 @@ export function GamePage() {
                   width: '100%',
                   fontSize: '1.2rem',
                   padding: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}
               >
                 Start Game
@@ -646,9 +686,12 @@ export function GamePage() {
           position: 'fixed',
           top: '20px',
           left: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        ← Back
+        Back
       </button>
 
       {/* Test Audio button */}
@@ -664,11 +707,14 @@ export function GamePage() {
           top: '20px',
           right: '20px',
           background: 'var(--accent)',
-          color: 'white',
+          color: '#000000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
         title="Test 3D spatial audio - listen to a sound rotate 360° around your head"
       >
-        🎧 Test Audio
+        Test Audio
       </button>
     </div>
   );

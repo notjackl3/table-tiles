@@ -52,6 +52,10 @@ body {
   background: var(--bg-secondary);
   color: var(--text-primary);
   box-shadow: 0 2px 8px var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .button:hover {
@@ -62,12 +66,13 @@ body {
 
 .button-primary {
   background: #8b7355;
-  color: white;
+  color: #ffffff;
   border-color: #7a6348;
 }
 
 .button-primary:hover {
   background: #7a6348;
+  color: #ffffff;
 }
 
 h1 {

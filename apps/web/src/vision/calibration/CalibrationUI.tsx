@@ -237,7 +237,7 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
             Paused: {localVideoRef.current.paused ? 'Yes' : 'No'}
             {localVideoRef.current.videoWidth === 0 && (
               <div style={{ color: '#ff0000', marginTop: '5px' }}>
-                ⚠️ Video dimensions are 0! Check console for errors.
+                Video dimensions are 0! Check console for errors.
               </div>
             )}
           </div>
@@ -251,7 +251,7 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
           </>
         ) : (
           <>
-            <p style={{ color: '#00ff00' }}>✓ Calibration computed!</p>
+            <p style={{ color: '#00ff00' }}>Calibration computed!</p>
             <p>Click anywhere on the table to test the mapping.</p>
           </>
         )}
@@ -262,10 +262,13 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
             style={{
               padding: '10px 20px',
               background: '#333',
-              color: '#fff',
+              color: '#ffffff',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             Reset
@@ -277,10 +280,13 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
               style={{
                 padding: '10px 20px',
                 background: '#00aa00',
-                color: '#fff',
+                color: '#ffffff',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
               Compute Calibration
@@ -293,10 +299,13 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
               style={{
                 padding: '10px 20px',
                 background: '#0066ff',
-                color: '#fff',
+                color: '#ffffff',
                 border: 'none',
                 borderRadius: '4px',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}
             >
               Save & Continue
@@ -306,12 +315,15 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
           <button
             onClick={onCancel}
             style={{
-              padding: '10px 20px',
+                padding: '10px 20px',
               background: '#aa0000',
-              color: '#fff',
+              color: '#ffffff',
               border: 'none',
               borderRadius: '4px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
           >
             Cancel
