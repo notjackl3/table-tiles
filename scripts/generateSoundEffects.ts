@@ -26,7 +26,7 @@ const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
 // Voice IDs
 // Visit https://api.elevenlabs.io/v1/voices to see available voices
 const ENERGETIC_VOICE = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - Energetic and friendly
-const ANNOUNCER_VOICE = 'IKne3meq5aSn9XLyUdCD'; // Charlie - British announcer style
+const ANNOUNCER_VOICE = 'gU0LNdkMOQCOrPrwtbee'; // British football announcer
 
 interface SoundEffect {
   name: string;
@@ -43,14 +43,14 @@ const SOUND_EFFECTS: SoundEffect[] = [
     text: 'Get ready! Game starting now!',
     filename: 'game-start.mp3',
     category: 'announcement',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'Game Start Alt',
     text: "Let's go! Show me what you've got!",
     filename: 'game-start-alt.mp3',
     category: 'announcement',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
 
   // Streak announcements (British football announcer)
@@ -96,28 +96,28 @@ const SOUND_EFFECTS: SoundEffect[] = [
     text: 'Ten combo! Amazing!',
     filename: 'combo-10.mp3',
     category: 'combo',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'Combo 15',
     text: 'Incredible! Fifteen combo!',
     filename: 'combo-15.mp3',
     category: 'combo',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'Combo 20',
     text: 'Twenty combo! Unbelievable!',
     filename: 'combo-20.mp3',
     category: 'combo',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'Combo 25',
     text: 'Legendary! Twenty-five combo!',
     filename: 'combo-25.mp3',
     category: 'combo',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
 
   // Celebration sounds
@@ -126,35 +126,35 @@ const SOUND_EFFECTS: SoundEffect[] = [
     text: 'Awesome!',
     filename: 'awesome.mp3',
     category: 'celebration',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'Perfect',
     text: 'Perfect!',
     filename: 'perfect.mp3',
     category: 'celebration',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'Boom',
     text: 'Boom!',
     filename: 'boom.mp3',
     category: 'celebration',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'Yeah',
     text: 'Yeah!',
     filename: 'yeah.mp3',
     category: 'celebration',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
   {
     name: 'On Fire',
     text: "You're on fire!",
     filename: 'on-fire.mp3',
     category: 'celebration',
-    voiceId: ENERGETIC_VOICE
+    voiceId: ANNOUNCER_VOICE
   },
 ];
 

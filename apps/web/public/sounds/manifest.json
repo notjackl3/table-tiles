@@ -1,0 +1,121 @@
+{
+  "generatedAt": "2026-02-28T20:33:58.348Z",
+  "voices": {
+    "energetic": "EXAVITQu4vr4xnSDxMaL",
+    "announcer": "gU0LNdkMOQCOrPrwtbee"
+  },
+  "effects": [
+    {
+      "name": "Game Start",
+      "filename": "game-start.mp3",
+      "category": "announcement",
+      "text": "Get ready! Game starting now!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Game Start Alt",
+      "filename": "game-start-alt.mp3",
+      "category": "announcement",
+      "text": "Let's go! Show me what you've got!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Streak 2",
+      "filename": "streak-2.mp3",
+      "category": "streak",
+      "text": "Two!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Streak 3",
+      "filename": "streak-3.mp3",
+      "category": "streak",
+      "text": "Three!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Streak 4",
+      "filename": "streak-4.mp3",
+      "category": "streak",
+      "text": "Wow!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Streak 5",
+      "filename": "streak-5.mp3",
+      "category": "streak",
+      "text": "Phenomenal!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Streak 6",
+      "filename": "streak-6.mp3",
+      "category": "streak",
+      "text": "Unstoppable!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Combo 10",
+      "filename": "combo-10.mp3",
+      "category": "combo",
+      "text": "Ten combo! Amazing!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Combo 15",
+      "filename": "combo-15.mp3",
+      "category": "combo",
+      "text": "Incredible! Fifteen combo!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Combo 20",
+      "filename": "combo-20.mp3",
+      "category": "combo",
+      "text": "Twenty combo! Unbelievable!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Combo 25",
+      "filename": "combo-25.mp3",
+      "category": "combo",
+      "text": "Legendary! Twenty-five combo!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Awesome",
+      "filename": "awesome.mp3",
+      "category": "celebration",
+      "text": "Awesome!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Perfect",
+      "filename": "perfect.mp3",
+      "category": "celebration",
+      "text": "Perfect!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Boom",
+      "filename": "boom.mp3",
+      "category": "celebration",
+      "text": "Boom!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "Yeah",
+      "filename": "yeah.mp3",
+      "category": "celebration",
+      "text": "Yeah!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    },
+    {
+      "name": "On Fire",
+      "filename": "on-fire.mp3",
+      "category": "celebration",
+      "text": "You're on fire!",
+      "voiceId": "gU0LNdkMOQCOrPrwtbee"
+    }
+  ]
+}

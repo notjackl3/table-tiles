@@ -4,6 +4,7 @@
  */
 
 export type HitQuality = 'perfect' | 'good' | 'miss';
+export type HypeLevel = 'low' | 'medium' | 'high';
 
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
@@ -12,11 +13,15 @@ export class AudioEngine {
   private dryGain: GainNode | null = null;
   private wetGain: GainNode | null = null;
   private enabled = true;
+  private hypeLevel: HypeLevel = 'medium';
 
   // Preloaded sound effects
   private soundEffects: Map<string, AudioBuffer> = new Map();
   private lastComboAnnouncement = 0;
   private celebrationSounds = ['awesome', 'perfect', 'boom', 'yeah', 'on-fire'];
+
+  // Impact sounds for hits
+  private impactSounds = ['boom'];
 
   // Note frequencies for 4 lanes (C4, E4, G4, B4)
   private laneFrequencies = [261.63, 329.63, 392.0, 493.88];
@@ -110,9 +115,25 @@ export class AudioEngine {
   }
 
   /**
+   * Get volume multiplier based on hype level
+   */
+  private getHypeMultiplier(): number {
+    switch (this.hypeLevel) {
+      case 'low':
+        return 0.5;
+      case 'medium':
+        return 1.0;
+      case 'high':
+        return 1.3;
+      default:
+        return 1.0;
+    }
+  }
+
+  /**
    * Play a preloaded sound effect
    */
-  private playSoundEffect(name: string, volume: number = 1.0) {
+  private playSoundEffect(name: string, volume: number = 1.0, respectHype: boolean = true) {
     if (!this.enabled || !this.audioContext || !this.masterGain) return;
 
     const buffer = this.soundEffects.get(name);
@@ -125,7 +146,10 @@ export class AudioEngine {
     const gainNode = this.audioContext.createGain();
 
     source.buffer = buffer;
-    gainNode.gain.value = volume;
+
+    // Apply hype level multiplier if respectHype is true
+    const finalVolume = respectHype ? volume * this.getHypeMultiplier() : volume;
+    gainNode.gain.value = finalVolume;
 
     source.connect(gainNode);
     gainNode.connect(this.masterGain);
@@ -134,27 +158,65 @@ export class AudioEngine {
   }
 
   /**
+   * Set hype level for announcer intensity
+   */
+  setHypeLevel(level: HypeLevel) {
+    this.hypeLevel = level;
+    console.log(`🎤 Hype level set to: ${level.toUpperCase()}`);
+  }
+
+  /**
+   * Get current hype level
+   */
+  getHypeLevel(): HypeLevel {
+    return this.hypeLevel;
+  }
+
+  /**
    * Play game start announcement
+   * Volume adjusts based on hype level
    */
   playGameStartSound() {
     // Randomly choose between two start sounds
     const sound = Math.random() > 0.5 ? 'game-start' : 'game-start-alt';
-    this.playSoundEffect(sound, 0.8);
+    this.playSoundEffect(sound, 0.8, true);
+  }
+
+  /**
+   * Play impact sound effect (boom, bam) for successful hits
+   * These are punchy, short sounds that emphasize the hit
+   */
+  playImpactSound(quality: HitQuality) {
+    // Only play impact sounds for good or perfect hits
+    if (quality === 'miss') return;
+
+    // Play more frequently for perfect hits
+    const playChance = quality === 'perfect' ? 0.6 : 0.3;
+    if (Math.random() > playChance) return;
+
+    const sound = this.impactSounds[
+      Math.floor(Math.random() * this.impactSounds.length)
+    ];
+
+    // Impact sounds should be punchy and not affected by hype level
+    this.playSoundEffect(sound, 0.4, false);
   }
 
   /**
    * Play streak announcement (British football announcer style)
    * Called for every hit to announce streaks 2-6
+   * Volume adjusts based on hype level
    */
   playStreakAnnouncement(streak: number) {
     // Play announcements for streaks 2-6
     if (streak >= 2 && streak <= 6) {
-      this.playSoundEffect(`streak-${streak}`, 0.95);
+      this.playSoundEffect(`streak-${streak}`, 0.95, true);
     }
   }
 
   /**
    * Play combo announcement at larger milestones (10, 15, 20, 25)
+   * Volume and intensity adjust based on hype level
    */
   playComboMilestone(combo: number) {
     const now = Date.now();
@@ -167,22 +229,24 @@ export class AudioEngine {
     const milestone = milestones.find(m => combo === m);
 
     if (milestone) {
-      this.playSoundEffect(`combo-${milestone}`, 0.9);
+      this.playSoundEffect(`combo-${milestone}`, 0.9, true);
       this.lastComboAnnouncement = now;
     }
   }
 
   /**
    * Play a random celebration sound for perfect hits
+   * These are more elaborate than impact sounds (e.g., "Awesome!", "You're on fire!")
    */
   playRandomCelebration() {
-    // Only play celebration sounds occasionally (20% chance)
-    if (Math.random() > 0.2) return;
+    // Only play celebration sounds occasionally (15% chance - reduced to avoid overlap with impact sounds)
+    if (Math.random() > 0.15) return;
 
     const sound = this.celebrationSounds[
       Math.floor(Math.random() * this.celebrationSounds.length)
     ];
-    this.playSoundEffect(sound, 0.7);
+    // Celebration sounds respect hype level
+    this.playSoundEffect(sound, 0.7, true);
   }
 
   /**

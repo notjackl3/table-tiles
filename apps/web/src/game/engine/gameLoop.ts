@@ -88,6 +88,12 @@ export class GameLoop {
     // Handle missed tiles (track for accuracy but don't end game)
     for (const tile of missedTiles) {
       this.scoringEngine.registerMiss();
+
+      // Notify about combo reset when tile is missed
+      if (this.config.onComboChange) {
+        const stats = this.scoringEngine.getStats();
+        this.config.onComboChange(stats.combo, 'miss');
+      }
     }
 
     // Notify score update

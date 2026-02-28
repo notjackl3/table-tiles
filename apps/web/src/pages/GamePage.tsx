@@ -24,9 +24,17 @@ export function GamePage() {
   const [cameraReady, setCameraReady] = useState(false);
   const [hands, setHands] = useState<HandLandmarks[]>([]);
   const [score, setScore] = useState(0);
+  const [combo, setCombo] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
   const [recentTaps, setRecentTaps] = useState<TapEvent[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string | null>('simple-melody');
+  const [hypeLevel, setHypeLevel] = useState<'low' | 'medium' | 'high'>('medium');
+
+  // Settings toggles
+  const [voiceEffectsEnabled, setVoiceEffectsEnabled] = useState(true);
+  const [voiceAnnouncementsEnabled, setVoiceAnnouncementsEnabled] = useState(true);
+  const [screenShakeEnabled, setScreenShakeEnabled] = useState(true);
+  const [visualEffectsEnabled, setVisualEffectsEnabled] = useState(true);
 
   // White flash tiles for visual feedback
   interface FlashTile {
@@ -34,6 +42,12 @@ export function GamePage() {
     timestamp: number;
   }
   const [flashTiles, setFlashTiles] = useState<FlashTile[]>([]);
+
+  // Screen shake effect
+  const [screenShake, setScreenShake] = useState(0);
+
+  // White flash effect for perfect hits
+  const [whiteFlash, setWhiteFlash] = useState(0);
 
   // Green hit highlights
   interface HitHighlight {
@@ -240,14 +254,21 @@ export function GamePage() {
       return;
     }
 
-    // Initialize audio
+    // Reset game state
+    setScore(0);
+    setCombo(0);
+
+    // Initialize audio with hype level
     audioEngine.initialize();
     audioEngine.resume();
+    audioEngine.setHypeLevel(hypeLevel);
 
-    // Play game start announcement
-    setTimeout(() => {
-      audioEngine.playGameStartSound();
-    }, 100); // Small delay to ensure audio is initialized
+    // Play game start announcement (only if voice announcements enabled)
+    if (voiceAnnouncementsEnabled) {
+      setTimeout(() => {
+        audioEngine.playGameStartSound();
+      }, 100); // Small delay to ensure audio is initialized
+    }
 
     // Create game loop
     const gameLoop = new GameLoop({
@@ -288,16 +309,37 @@ export function GamePage() {
 
         // Play melodic sound with noteFrequency if available
         audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
-      },
-      onComboChange: (combo, quality) => {
-        // Play streak announcements (British announcer for streaks 2-6)
-        audioEngine.playStreakAnnouncement(combo);
 
-        // Play combo milestone sounds (10, 15, 20, 25)
-        audioEngine.playComboMilestone(combo);
+        // Play impact sound for successful hits (boom, bam) - only if voice effects enabled
+        if (voiceEffectsEnabled) {
+          audioEngine.playImpactSound(quality as HitQuality);
+        }
 
-        // Play celebration sound for perfect hits (occasionally)
+        // Trigger screen shake and white flash for perfect hits
         if (quality === 'perfect') {
+          if (screenShakeEnabled) {
+            setScreenShake(Date.now());
+          }
+          if (visualEffectsEnabled) {
+            setWhiteFlash(Date.now());
+          }
+        }
+      },
+      onComboChange: (newCombo, quality) => {
+        // Update combo state
+        setCombo(newCombo);
+
+        // Only play announcements if enabled
+        if (voiceAnnouncementsEnabled) {
+          // Play streak announcements (British announcer for streaks 2-6)
+          audioEngine.playStreakAnnouncement(newCombo);
+
+          // Play combo milestone sounds (10, 15, 20, 25)
+          audioEngine.playComboMilestone(newCombo);
+        }
+
+        // Play celebration sound for perfect hits (occasionally) - only if voice effects enabled
+        if (quality === 'perfect' && voiceEffectsEnabled) {
           audioEngine.playRandomCelebration();
         }
       }
@@ -469,6 +511,48 @@ export function GamePage() {
     render();
   }, [gameStarted, flashTiles, hitHighlights]);
 
+  // Animate screen shake
+  useEffect(() => {
+    if (screenShake === 0) return;
+
+    const shakeDuration = 200; // 200ms shake
+    const startTime = screenShake;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < shakeDuration) {
+        // Force re-render to update transform
+        setScreenShake(startTime);
+        requestAnimationFrame(animate);
+      } else {
+        setScreenShake(0); // Reset shake
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [screenShake]);
+
+  // Animate white flash
+  useEffect(() => {
+    if (whiteFlash === 0) return;
+
+    const flashDuration = 150; // 150ms flash
+    const startTime = whiteFlash;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < flashDuration) {
+        // Force re-render to update opacity
+        setWhiteFlash(startTime);
+        requestAnimationFrame(animate);
+      } else {
+        setWhiteFlash(0); // Reset flash
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [whiteFlash]);
+
   // Render hand overlay
   useEffect(() => {
     const canvas = overlayCanvasRef.current;
@@ -560,6 +644,60 @@ export function GamePage() {
         <div className="score-display">Score: {score}</div>
       </div>
 
+      {/* Streak counter on the right */}
+      {gameStarted && (
+        <div style={{
+          position: 'fixed',
+          top: '50%',
+          right: '40px',
+          transform: 'translateY(-50%)',
+          background: combo > 0 ? 'rgba(139, 115, 85, 0.95)' : 'rgba(100, 100, 100, 0.7)',
+          border: combo > 0 ? '4px solid #8b7355' : '4px solid #666666',
+          borderRadius: '16px',
+          padding: '24px 32px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: '120px',
+          boxShadow: combo > 0 ? '0 8px 32px rgba(139, 115, 85, 0.4)' : '0 4px 16px rgba(0, 0, 0, 0.3)',
+          transition: 'all 0.2s ease',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: combo > 0 ? '#f5f1e8' : '#cccccc',
+            marginBottom: '8px',
+            letterSpacing: '1px',
+          }}>
+            STREAK
+          </div>
+          <div style={{
+            fontSize: combo >= 10 ? '56px' : '48px',
+            fontWeight: 'bold',
+            color: combo > 0 ? '#ffffff' : '#999999',
+            lineHeight: 1,
+            textShadow: combo > 0 ? '0 2px 8px rgba(0, 0, 0, 0.3)' : 'none',
+            transition: 'all 0.2s ease',
+          }}>
+            {combo}
+          </div>
+          {combo >= 10 && (
+            <div style={{
+              marginTop: '8px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              color: '#ffd700',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}>
+              {combo >= 25 ? 'LEGENDARY!' : combo >= 20 ? 'ON FIRE!' : combo >= 15 ? 'AMAZING!' : 'GREAT!'}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Main game area with sidebar */}
       <div className="game-main" style={{ display: 'flex', padding: 0, gap: 0 }}>
         {/* Settings sidebar - only show before game starts */}
@@ -574,6 +712,196 @@ export function GamePage() {
           }}>
             <div style={{ flex: 1, overflowY: 'auto' }}>
               <SettingsPanel visionLoop={visionLoopRef.current} />
+
+              {/* Hype Level Selector */}
+              <div style={{
+                padding: '12px',
+                background: '#f5f1e8',
+                borderBottom: '2px solid #d4c7b0',
+              }}>
+                <h3 style={{
+                  margin: '0 0 8px 0',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                  color: '#5a4d3a',
+                }}>
+                  Announcer Hype Level
+                </h3>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}>
+                  {(['low', 'medium', 'high'] as const).map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setHypeLevel(level)}
+                      style={{
+                        padding: '8px 12px',
+                        background: hypeLevel === level ? '#8b7355' : '#ffffff',
+                        color: hypeLevel === level ? '#ffffff' : '#5a4d3a',
+                        border: `2px solid ${hypeLevel === level ? '#8b7355' : '#d4c7b0'}`,
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: hypeLevel === level ? 'bold' : 'normal',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <span style={{ textTransform: 'capitalize' }}>{level}</span>
+                      {hypeLevel === level && <span>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Audio & Visual Settings */}
+              <div style={{
+                padding: '12px',
+                background: '#f5f1e8',
+                borderBottom: '2px solid #d4c7b0',
+              }}>
+                <h3 style={{
+                  margin: '0 0 8px 0',
+                  fontSize: '0.9rem',
+                  fontWeight: 'bold',
+                  color: '#5a4d3a',
+                }}>
+                  Audio & Visual
+                </h3>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                }}>
+                  {/* Voice Announcements Toggle */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    background: '#ffffff',
+                    border: '2px solid #d4c7b0',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}>
+                    <span style={{
+                      fontSize: '0.85rem',
+                      color: '#5a4d3a',
+                      fontWeight: '500',
+                    }}>
+                      🎙️ Announcements
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={voiceAnnouncementsEnabled}
+                      onChange={(e) => setVoiceAnnouncementsEnabled(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </label>
+
+                  {/* Voice Effects Toggle */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    background: '#ffffff',
+                    border: '2px solid #d4c7b0',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}>
+                    <span style={{
+                      fontSize: '0.85rem',
+                      color: '#5a4d3a',
+                      fontWeight: '500',
+                    }}>
+                      🎉 Voice Effects
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={voiceEffectsEnabled}
+                      onChange={(e) => setVoiceEffectsEnabled(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </label>
+
+                  {/* Visual Effects Toggle */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    background: '#ffffff',
+                    border: '2px solid #d4c7b0',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}>
+                    <span style={{
+                      fontSize: '0.85rem',
+                      color: '#5a4d3a',
+                      fontWeight: '500',
+                    }}>
+                      ✨ Visual Effects
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={visualEffectsEnabled}
+                      onChange={(e) => setVisualEffectsEnabled(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </label>
+
+                  {/* Screen Shake Toggle */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    background: '#ffffff',
+                    border: '2px solid #d4c7b0',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}>
+                    <span style={{
+                      fontSize: '0.85rem',
+                      color: '#5a4d3a',
+                      fontWeight: '500',
+                    }}>
+                      📳 Screen Shake
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={screenShakeEnabled}
+                      onChange={(e) => setScreenShakeEnabled(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        cursor: 'pointer',
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
             <div style={{
               padding: '16px',
@@ -637,8 +965,27 @@ export function GamePage() {
               position: 'absolute',
               width: '100%',
               height: '100%',
+              transform: screenShake > 0 && Date.now() - screenShake < 200
+                ? `translate(${Math.sin(Date.now() * 0.1) * 8}px, ${Math.cos(Date.now() * 0.15) * 8}px)`
+                : 'none',
+              transition: screenShake > 0 && Date.now() - screenShake < 200 ? 'none' : 'transform 0.1s ease-out',
             }}
           />
+
+          {/* White flash overlay for perfect hits */}
+          {whiteFlash > 0 && Date.now() - whiteFlash < 150 && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'white',
+              opacity: Math.max(0, 1 - (Date.now() - whiteFlash) / 150),
+              pointerEvents: 'none',
+              mixBlendMode: 'screen',
+            }} />
+          )}
 
           {!cameraReady && (
             <div style={{
