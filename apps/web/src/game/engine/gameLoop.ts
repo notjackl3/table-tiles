@@ -55,6 +55,11 @@ export class GameLoop {
     this.tileEngine.clear();
     this.scoringEngine.reset();
 
+    console.log('[GameLoop] Starting game with beatmap:', {
+      id: beatmap.id,
+      isMp3Only: beatmap.silentNotes || false
+    });
+
     this.loop();
   }
 
@@ -85,7 +90,7 @@ export class GameLoop {
     // Update tiles
     const { missedTiles } = this.tileEngine.update(deltaTime);
 
-    // Handle missed tiles - game over on first miss (no lives)
+    // Handle missed tiles
     if (missedTiles.length > 0) {
       this.scoringEngine.registerMiss();
 
@@ -95,9 +100,16 @@ export class GameLoop {
         this.config.onComboChange(stats.combo, 'miss');
       }
 
-      // End game immediately on missed note
-      this.gameOver();
-      return;
+      // End game immediately on missed note ONLY for MP3-only songs
+      // For MIDI songs, continue playing and calculate accuracy at the end
+      const isMp3Only = this.beatmap?.silentNotes || false;
+      if (isMp3Only) {
+        console.log('[GameLoop] Miss detected in MP3-only mode - ending game');
+        this.gameOver();
+        return;
+      } else {
+        console.log('[GameLoop] Miss detected in MIDI mode - continuing game');
+      }
     }
 
     // Notify score update

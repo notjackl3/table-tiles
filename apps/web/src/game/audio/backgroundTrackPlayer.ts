@@ -21,12 +21,59 @@ export class BackgroundTrackPlayer {
   private gainNode: GainNode | null = null;
   private isPlaying = false;
   private readonly BACKGROUND_VOLUME: number;
+  private readonly TARGET_PEAK_LEVEL = 0.7; // Target peak level for normalization (70% of max)
+  private readonly MIN_PEAK_THRESHOLD = 0.15; // Boost if peak is below 15%
 
   constructor(config: BackgroundTrackConfig) {
     this.config = config;
     this.audioContext = config.audioContext;
     this.masterGain = config.masterGain;
     this.BACKGROUND_VOLUME = config.backgroundVolume ?? 0.20; // Default 20% volume
+  }
+
+  /**
+   * Analyze audio buffer to find peak volume
+   * Returns the maximum absolute sample value across all channels
+   */
+  private analyzePeakVolume(buffer: AudioBuffer): number {
+    let peak = 0;
+
+    // Check all channels
+    for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+      const channelData = buffer.getChannelData(channel);
+
+      // Find peak in this channel
+      for (let i = 0; i < channelData.length; i++) {
+        const abs = Math.abs(channelData[i]);
+        if (abs > peak) {
+          peak = abs;
+        }
+      }
+    }
+
+    return peak;
+  }
+
+  /**
+   * Calculate normalization gain to boost quiet audio
+   * Returns a multiplier to apply to the volume
+   */
+  private calculateNormalizationGain(peakVolume: number): number {
+    // If audio is already loud enough, don't boost
+    if (peakVolume >= this.MIN_PEAK_THRESHOLD) {
+      console.log('[BackgroundTrack] Audio level is good, no boost needed');
+      return 1.0;
+    }
+
+    // Calculate boost needed to reach target level
+    const boost = Math.min(this.TARGET_PEAK_LEVEL / peakVolume, 5.0); // Cap at 5x boost
+    console.log('[BackgroundTrack] Audio is quiet, applying boost:', {
+      peakVolume: (peakVolume * 100).toFixed(1) + '%',
+      boost: boost.toFixed(2) + 'x',
+      targetLevel: (this.TARGET_PEAK_LEVEL * 100).toFixed(1) + '%'
+    });
+
+    return boost;
   }
 
   /**
@@ -61,7 +108,13 @@ export class BackgroundTrackPlayer {
       this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
       console.log(`[BackgroundTrack] Audio loaded successfully (${this.audioBuffer.duration.toFixed(2)}s)`);
-      console.log(`[BackgroundTrack] Starting playback at ${this.BACKGROUND_VOLUME * 100}% volume`);
+
+      // Analyze audio and calculate normalization
+      const peakVolume = this.analyzePeakVolume(this.audioBuffer);
+      const normalizationGain = this.calculateNormalizationGain(peakVolume);
+      const finalVolume = this.BACKGROUND_VOLUME * normalizationGain;
+
+      console.log(`[BackgroundTrack] Starting playback at ${(finalVolume * 100).toFixed(1)}% volume (base: ${(this.BACKGROUND_VOLUME * 100).toFixed(1)}%, boost: ${normalizationGain.toFixed(2)}x)`);
 
       // Double-check nothing is playing before creating new nodes
       if (this.sourceNode || this.gainNode) {
@@ -73,9 +126,9 @@ export class BackgroundTrackPlayer {
       this.sourceNode = this.audioContext.createBufferSource();
       this.sourceNode.buffer = this.audioBuffer;
 
-      // Create gain node for volume control
+      // Create gain node for volume control with normalization
       this.gainNode = this.audioContext.createGain();
-      this.gainNode.gain.value = this.BACKGROUND_VOLUME;
+      this.gainNode.gain.value = finalVolume;
 
       // Connect: source -> gain -> master
       this.sourceNode.connect(this.gainNode);

@@ -183,7 +183,7 @@ export class AudioEngine {
   playGameStartSound() {
     // Randomly choose between two start sounds
     const sound = Math.random() > 0.5 ? 'game-start' : 'game-start-alt';
-    this.playSoundEffect(sound, 0.8, true);
+    this.playSoundEffect(sound, 0.6, true); // Reduced to 75% (was 0.8)
   }
 
   /**
@@ -203,7 +203,7 @@ export class AudioEngine {
     ];
 
     // Impact sounds should be punchy and not affected by hype level
-    this.playSoundEffect(sound, 0.4, false);
+    this.playSoundEffect(sound, 0.3, false); // Reduced to 75% (was 0.4)
   }
 
   /**
@@ -214,7 +214,7 @@ export class AudioEngine {
   playStreakAnnouncement(streak: number) {
     // Play announcement only for streak 5
     if (streak === 5) {
-      this.playSoundEffect(`streak-${streak}`, 0.95, true);
+      this.playSoundEffect(`streak-${streak}`, 0.7, true); // Reduced to ~74% (was 0.95)
     }
   }
 
@@ -233,7 +233,7 @@ export class AudioEngine {
     const milestone = milestones.find(m => combo === m);
 
     if (milestone) {
-      this.playSoundEffect(`combo-${milestone}`, 0.9, true);
+      this.playSoundEffect(`combo-${milestone}`, 0.68, true); // Reduced to ~75% (was 0.9)
       this.lastComboAnnouncement = now;
     }
   }
@@ -251,7 +251,7 @@ export class AudioEngine {
       Math.floor(Math.random() * this.celebrationSounds.length)
     ];
     // Celebration sounds respect hype level
-    this.playSoundEffect(sound, 0.7, true);
+    this.playSoundEffect(sound, 0.53, true); // Reduced to ~75% (was 0.7)
     return true;
   }
 

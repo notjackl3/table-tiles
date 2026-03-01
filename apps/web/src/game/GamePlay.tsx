@@ -15,6 +15,7 @@ export function GamePlay() {
   const { canvasRef, overlayCanvasRef, onTapsCallback, settings } = useGameContext();
   const gameLoopRef = useRef<GameLoop | null>(null);
   const audioEngine = getAudioEngine();
+  const beatmapRef = useRef<any>(null); // Store beatmap to check silentNotes flag
 
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -218,7 +219,11 @@ export function GamePlay() {
           return [...filtered, { lane, timestamp: now }];
         });
 
-        audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
+        // Only play note sounds for MIDI songs (not MP3-only songs)
+        const isMp3Only = beatmapRef.current?.silentNotes || false;
+        if (!isMp3Only) {
+          audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
+        }
 
         if (settings.voiceEffectsEnabled) {
           audioEngine.playImpactSound(quality as HitQuality);
@@ -276,10 +281,13 @@ export function GamePlay() {
 
     // Load beatmap
     const beatmap = loadSong(settings.selectedSongId);
+    beatmapRef.current = beatmap; // Store beatmap reference
     audioEngine.startBackgroundTrack(beatmap);
     gameLoop.start(beatmap);
 
-    console.log('[GamePlay] Game started with song:', settings.selectedSongId);
+    console.log('[GamePlay] Game started with song:', settings.selectedSongId, {
+      isMp3Only: beatmap.silentNotes || false
+    });
 
     return () => {
       console.log('[GamePlay] Unmounting, cleaning up...');
