@@ -8,7 +8,7 @@ export function HomePage() {
   return (
     <div className="home-page">
       <div className="home-content">
-        <h1>TableTiles</h1>
+        <h1>Hand Tiles</h1>
         <p style={{ fontSize: '1.4rem', marginBottom: '3rem' }}>
           Turn any desk into a rhythm game
         </p>

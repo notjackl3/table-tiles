@@ -1,11 +1,12 @@
 import type { HitResult } from '../../types/shared';
 
 // Hit window thresholds (in pixels from hit line)
-// Increased for more forgiving timing
+// Asymmetric thresholds: more forgiving when tile is below hit line (compensates for hand tracking lag)
 export const HIT_WINDOWS = {
-  perfect: 40,   // Was 30px
-  good: 80,      // Was 60px
-  miss: 120      // Was 100px
+  perfect: 40,   // Symmetric: ±40px
+  good: 80,      // Symmetric: ±80px
+  miss: 120,     // Above hit line (negative distance): 120px
+  missBelow: 180 // Below hit line (positive distance): 180px - extra forgiveness for lag
 };
 
 // Points awarded
@@ -49,10 +50,13 @@ export class ScoringEngine {
 
   /**
    * Calculate hit result based on distance from hit line
+   * Asymmetric tolerance: more forgiving when tile is below hit line (positive distance)
+   * to compensate for hand tracking detection lag
    */
   calculateHitResult(distance: number): HitResult {
     const absDist = Math.abs(distance);
 
+    // Perfect and good thresholds are symmetric (same tolerance above and below)
     if (absDist <= HIT_WINDOWS.perfect) {
       return {
         quality: 'perfect',
@@ -66,11 +70,23 @@ export class ScoringEngine {
         distance: absDist
       };
     } else {
-      return {
-        quality: 'miss',
-        points: POINTS.miss,
-        distance: absDist
-      };
+      // Miss threshold is asymmetric: more forgiving below the hit line
+      const missThreshold = distance > 0 ? HIT_WINDOWS.missBelow : HIT_WINDOWS.miss;
+
+      if (absDist <= missThreshold) {
+        // Still register as a "good" hit if within the extended threshold below
+        return {
+          quality: 'good',
+          points: POINTS.good,
+          distance: absDist
+        };
+      } else {
+        return {
+          quality: 'miss',
+          points: POINTS.miss,
+          distance: absDist
+        };
+      }
     }
   }
 

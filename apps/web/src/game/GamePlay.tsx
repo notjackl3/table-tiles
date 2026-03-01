@@ -160,8 +160,9 @@ export function GamePlay() {
     audioEngine.setHypeLevel(settings.hypeLevel);
 
     // Play game start announcement
+    let announcementTimeout: number | undefined;
     if (settings.voiceAnnouncementsEnabled) {
-      setTimeout(() => {
+      announcementTimeout = window.setTimeout(() => {
         audioEngine.playGameStartSound();
         const announcementSize = settings.hypeLevel === 'high' ? 'huge' : settings.hypeLevel === 'medium' ? 'large' : 'medium';
         addTextAnnouncement('LET\'S GO!', announcementSize);
@@ -291,6 +292,12 @@ export function GamePlay() {
 
     return () => {
       console.log('[GamePlay] Unmounting, cleaning up...');
+
+      // Clear announcement timeout to prevent duplicate announcements
+      if (announcementTimeout) {
+        clearTimeout(announcementTimeout);
+      }
+
       if (gameLoopRef.current) {
         gameLoopRef.current.stop();
         gameLoopRef.current = null;

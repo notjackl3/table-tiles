@@ -26,7 +26,7 @@ app.use('/', audioRouter);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🎹 TableTiles API running on http://localhost:${PORT}`);
+  console.log(`🎹 Hand Tiles API running on http://localhost:${PORT}`);
 });
 
 // Graceful shutdown

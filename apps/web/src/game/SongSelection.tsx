@@ -96,17 +96,20 @@ export function SongSelection({ selectedSongId, onSelectSong, audioEngine }: Son
   };
 
   return (
-    <div style={{
-      width: '320px',
-      height: 'calc(100vh - 100px)', // Full viewport height minus header (100px)
-      maxHeight: 'calc(100vh - 100px)',
-      background: '#ebe4d6',
-      borderLeft: '3px solid #d4c7b0',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '20px',
-      overflow: 'hidden'
-    }}>
+    <div
+      data-tutorial="song-selection"
+      style={{
+        width: '320px',
+        height: 'calc(100vh - 100px)', // Full viewport height minus header (100px)
+        maxHeight: 'calc(100vh - 100px)',
+        background: '#ebe4d6',
+        borderLeft: '3px solid #d4c7b0',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px',
+        overflow: 'hidden'
+      }}
+    >
       <h2 style={{
         margin: '0 0 20px 0',
         color: '#5a4d3a',

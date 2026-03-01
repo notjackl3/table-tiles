@@ -15,9 +15,14 @@ export class AudioEngine {
   private convolver: ConvolverNode | null = null;
   private dryGain: GainNode | null = null;
   private wetGain: GainNode | null = null;
+  private delayNode: DelayNode | null = null;
+  private compressor: DynamicsCompressorNode | null = null;
   private enabled = true;
   private hypeLevel: HypeLevel = 'medium';
   private backgroundTrackPlayer: BackgroundTrackPlayer | null = null;
+  private rotationEnabled = false;
+  private rotationSpeed = 0.5; // Rotations per second
+  private rotationStartTime = 0;
 
   // Preloaded sound effects
   private soundEffects: Map<string, AudioBuffer> = new Map();
@@ -56,14 +61,28 @@ export class AudioEngine {
     this.wetGain = this.audioContext.createGain();
     this.convolver = this.audioContext.createConvolver();
 
-    // Set dry/wet mix (70% dry, 30% wet for subtle reverb)
+    // Create delay for echo effect
+    this.delayNode = this.audioContext.createDelay(1.0); // 1 second max delay
+    this.delayNode.delayTime.value = 0.08; // 150ms delay for echo
+
+    // Create compressor for loudness and preventing clipping
+    this.compressor = this.audioContext.createDynamicsCompressor();
+    this.compressor.threshold.value = -24;
+    this.compressor.knee.value = 30;
+    this.compressor.ratio.value = 12;
+    this.compressor.attack.value = 0.003;
+    this.compressor.release.value = 0.25;
+
+    // Set dry/wet mix (60% dry, 40% wet for more immersive reverb)
     this.dryGain.gain.value = 0.7;
     this.wetGain.gain.value = 0.3;
 
-    // Connect reverb chain
-    this.dryGain.connect(this.masterGain);
+    // Connect audio chain: dry/wet → delay → compressor → master
+    this.dryGain.connect(this.delayNode);
+    this.delayNode.connect(this.compressor);
     this.wetGain.connect(this.convolver);
-    this.convolver.connect(this.masterGain);
+    this.convolver.connect(this.compressor);
+    this.compressor.connect(this.masterGain);
 
     // Generate impulse response for reverb
     await this.createImpulseResponse();
@@ -263,7 +282,7 @@ export class AudioEngine {
     if (!this.audioContext || !this.convolver) return;
 
     const sampleRate = this.audioContext.sampleRate;
-    const length = sampleRate * 2; // 2 seconds of reverb
+    const length = sampleRate * 3; // 3 seconds of reverb for longer echo tail
     const impulse = this.audioContext.createBuffer(2, length, sampleRate);
     const impulseL = impulse.getChannelData(0);
     const impulseR = impulse.getChannelData(1);
@@ -323,14 +342,17 @@ export class AudioEngine {
       panner.coneOuterAngle = 0;
       panner.coneOuterGain = 0;
 
-      // Set position: centered for multi-note, lane-based for single note
+      // Set position: centered for multi-note, lane-based or rotating for single note
       if (isMultiNote) {
         // Center position for cohesive chord sound
         panner.positionX.setValueAtTime(0, now);
         panner.positionY.setValueAtTime(0, now);
         panner.positionZ.setValueAtTime(-2, now);
+      } else if (this.rotationEnabled) {
+        // Circular motion for single notes when rotation is enabled
+        this.animateCircularMotion(panner, attackTime + decayTime + releaseTime, now);
       } else {
-        // Lane-based position for single notes
+        // Lane-based position for single notes (static)
         const pos = this.lanePositions[lane % 4];
         panner.positionX.setValueAtTime(pos.x, now);
         panner.positionY.setValueAtTime(pos.y, now);
@@ -354,7 +376,7 @@ export class AudioEngine {
       gainNode.gain.linearRampToValueAtTime(sustainLevel * volumeMultiplier, now + attackTime + decayTime);
       gainNode.gain.linearRampToValueAtTime(0, now + attackTime + decayTime + releaseTime);
 
-      // Connect: oscillator -> gain -> panner -> dry/wet split
+      // Connect: oscillator -> gain -> panner -> dry/wet split (routed through delay and compressor)
       oscillator.connect(gainNode);
       gainNode.connect(panner);
       panner.connect(this.dryGain!);
@@ -510,6 +532,56 @@ export class AudioEngine {
   }
 
   /**
+   * Enable/disable circular rotation effect for spatial audio
+   */
+  setRotationEnabled(enabled: boolean) {
+    this.rotationEnabled = enabled;
+    if (enabled && this.audioContext) {
+      this.rotationStartTime = this.audioContext.currentTime;
+    }
+    console.log(`[AudioEngine] Rotation ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  /**
+   * Set rotation speed (rotations per second)
+   * @param speed - Rotations per second (clamped between 0.1 and 2.0)
+   */
+  setRotationSpeed(speed: number) {
+    this.rotationSpeed = Math.max(0.1, Math.min(2.0, speed));
+    console.log(`[AudioEngine] Rotation speed set to ${this.rotationSpeed.toFixed(2)} rotations/sec`);
+  }
+
+  /**
+   * Animate panner position in circular motion
+   * @param panner - The panner node to animate
+   * @param duration - Total duration of the sound
+   * @param startTime - AudioContext start time
+   */
+  private animateCircularMotion(panner: PannerNode, duration: number, startTime: number) {
+    if (!this.rotationEnabled) return;
+
+    const radius = 3; // 3 units from listener
+    const steps = Math.ceil(duration * 60); // 60 updates per second
+
+    for (let i = 0; i <= steps; i++) {
+      const t = startTime + (i / 60); // Time in seconds
+      const elapsed = t - startTime;
+
+      // Calculate rotation angle based on elapsed time and rotation speed
+      const angle = (elapsed * this.rotationSpeed * Math.PI * 2) +
+                    (this.rotationStartTime * this.rotationSpeed * Math.PI * 2);
+
+      const x = Math.sin(angle) * radius;
+      const z = -Math.cos(angle) * radius; // Negative Z is in front
+      const y = 0;
+
+      panner.positionX.linearRampToValueAtTime(x, t);
+      panner.positionY.linearRampToValueAtTime(y, t);
+      panner.positionZ.linearRampToValueAtTime(z, t);
+    }
+  }
+
+  /**
    * Test 3D audio by playing a sound that rotates 360 degrees around the listener
    */
   playTestAudio360() {
@@ -582,6 +654,8 @@ export class AudioEngine {
       this.backgroundTrackPlayer = new BackgroundTrackPlayer({
         audioContext: this.audioContext,
         masterGain: this.masterGain,
+        dryGain: this.dryGain || undefined,
+        wetGain: this.wetGain || undefined,
         backgroundVolume: 0.20 // 20% volume for background track
       });
     }
@@ -612,6 +686,8 @@ export class AudioEngine {
       this.convolver = null;
       this.dryGain = null;
       this.wetGain = null;
+      this.delayNode = null;
+      this.compressor = null;
       this.backgroundTrackPlayer = null;
     }
   }

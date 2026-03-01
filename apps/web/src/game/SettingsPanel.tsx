@@ -55,7 +55,7 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
   };
 
   return (
-    <div className="settings-panel">
+    <div className="settings-panel" data-tutorial="settings-panel">
       <h2 style={{ marginBottom: '16px', fontSize: '1.1rem', color: '#2c2416' }}>Detection Settings</h2>
 
       <div className="settings-grid">

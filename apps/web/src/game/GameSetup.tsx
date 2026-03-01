@@ -5,11 +5,13 @@ import { SongSelection } from './SongSelection';
 import { getAudioEngine } from './audio/audioEngine';
 import { Button } from '../components/Button';
 import { playClickSound } from '../utils/clickSound';
+import { useTutorial } from '../components/Tutorial/useTutorial';
 
 export function GameSetup() {
   const navigate = useNavigate();
   const { cameraReady, visionLoopRef, settings, updateSettings } = useGameContext();
   const audioEngine = getAudioEngine();
+  const { startTutorial } = useTutorial();
 
   const handleStartGame = () => {
     console.log('[GameSetup] Starting game...');
@@ -52,11 +54,14 @@ export function GameSetup() {
               <SettingsPanel visionLoop={visionLoopRef.current} />
 
               {/* Hype Level Selector */}
-              <div style={{
-                padding: '12px',
-                background: '#f5f1e8',
-                borderBottom: '2px solid #d4c7b0',
-              }}>
+              <div
+                data-tutorial="hype-level"
+                style={{
+                  padding: '12px',
+                  background: '#f5f1e8',
+                  borderBottom: '2px solid #d4c7b0',
+                }}
+              >
                 <h3 style={{
                   margin: '0 0 8px 0',
                   fontSize: '0.9rem',
@@ -117,6 +122,7 @@ export function GameSetup() {
                 }}>
                   {/* Voice Announcements Toggle */}
                   <Button
+                    data-tutorial="announcements"
                     onClick={() => updateSettings({ voiceAnnouncementsEnabled: !settings.voiceAnnouncementsEnabled })}
                     style={{
                       padding: '8px 12px',
@@ -139,6 +145,7 @@ export function GameSetup() {
 
                   {/* Voice Effects Toggle */}
                   <Button
+                    data-tutorial="voice-effects"
                     onClick={() => updateSettings({ voiceEffectsEnabled: !settings.voiceEffectsEnabled })}
                     style={{
                       padding: '8px 12px',
@@ -161,6 +168,7 @@ export function GameSetup() {
 
                   {/* Visual Effects Toggle */}
                   <Button
+                    data-tutorial="visual-effects"
                     onClick={() => updateSettings({ visualEffectsEnabled: !settings.visualEffectsEnabled })}
                     style={{
                       padding: '8px 12px',
@@ -183,6 +191,7 @@ export function GameSetup() {
 
                   {/* Screen Shake Toggle */}
                   <Button
+                    data-tutorial="screen-shake"
                     onClick={() => updateSettings({ screenShakeEnabled: !settings.screenShakeEnabled })}
                     style={{
                       padding: '8px 12px',
@@ -212,6 +221,7 @@ export function GameSetup() {
               borderTop: '2px solid #d4c7b0',
             }}>
               <Button
+                data-tutorial="start-game"
                 className="button button-primary"
                 onClick={handleStartGame}
                 style={{
@@ -258,6 +268,25 @@ export function GameSetup() {
         }}
       >
         Back
+      </Button>
+
+      {/* Tutorial button */}
+      <Button
+        className="button"
+        onClick={startTutorial}
+        style={{
+          position: 'fixed',
+          top: '20px',
+          right: '190px',
+          background: '#8b7355',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+        title="Start interactive tutorial with voice narration"
+      >
+        Tutorial
       </Button>
 
       {/* Test Audio button */}

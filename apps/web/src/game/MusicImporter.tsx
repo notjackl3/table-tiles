@@ -68,6 +68,21 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
       return;
     }
 
+    // Check for duplicate song name (generate the same ID that would be created)
+    const wouldBeSongId = songName.trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    const { getAvailableSongs } = await import('./songs/songLoader');
+    const existingSongs = getAvailableSongs();
+    const isDuplicate = existingSongs.some(song => song.id === wouldBeSongId);
+
+    if (isDuplicate) {
+      setError(`A song named "${songName}" already exists. Please delete the existing song first or choose a different name.`);
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
     setImportResult(null);

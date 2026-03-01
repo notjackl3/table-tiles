@@ -2,6 +2,8 @@ import { Outlet } from 'react-router-dom';
 import { GameProvider, useGameContext } from './GameContext';
 import { HAND_LANDMARKS } from '../vision/handTracker';
 import { useEffect } from 'react';
+import { TutorialProvider } from '../components/Tutorial/useTutorial';
+import { TutorialOverlay } from '../components/Tutorial/TutorialOverlay';
 
 function GameLayoutContent() {
   const { videoRef, overlayCanvasRef, hands, cameraReady } = useGameContext();
@@ -153,7 +155,10 @@ function GameLayoutContent() {
 export function GameLayout() {
   return (
     <GameProvider>
-      <GameLayoutContent />
+      <TutorialProvider>
+        <GameLayoutContent />
+        <TutorialOverlay />
+      </TutorialProvider>
     </GameProvider>
   );
 }

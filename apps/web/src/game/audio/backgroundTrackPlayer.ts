@@ -9,13 +9,16 @@ import type { Beatmap } from '../engine/beatmap';
 export interface BackgroundTrackConfig {
   audioContext: AudioContext;
   masterGain: GainNode;
+  dryGain?: GainNode; // Optional dry gain for spatial effects
+  wetGain?: GainNode; // Optional wet gain for reverb
   backgroundVolume?: number; // Volume multiplier for background track (default 0.20)
 }
 
 export class BackgroundTrackPlayer {
-  private config: BackgroundTrackConfig;
   private audioContext: AudioContext;
   private masterGain: GainNode;
+  private dryGain: GainNode | null = null;
+  private wetGain: GainNode | null = null;
   private audioBuffer: AudioBuffer | null = null;
   private sourceNode: AudioBufferSourceNode | null = null;
   private gainNode: GainNode | null = null;
@@ -25,9 +28,10 @@ export class BackgroundTrackPlayer {
   private readonly MIN_PEAK_THRESHOLD = 0.15; // Boost if peak is below 15%
 
   constructor(config: BackgroundTrackConfig) {
-    this.config = config;
     this.audioContext = config.audioContext;
     this.masterGain = config.masterGain;
+    this.dryGain = config.dryGain || null;
+    this.wetGain = config.wetGain || null;
     this.BACKGROUND_VOLUME = config.backgroundVolume ?? 0.20; // Default 20% volume
   }
 
@@ -130,9 +134,19 @@ export class BackgroundTrackPlayer {
       this.gainNode = this.audioContext.createGain();
       this.gainNode.gain.value = finalVolume;
 
-      // Connect: source -> gain -> master
+      // Connect: source -> gain -> spatial effects (if available) -> master
       this.sourceNode.connect(this.gainNode);
-      this.gainNode.connect(this.masterGain);
+
+      // Route through spatial effects (reverb/echo) if available
+      if (this.dryGain && this.wetGain) {
+        console.log('[BackgroundTrack] Routing through spatial effects (reverb/echo)');
+        this.gainNode.connect(this.dryGain);
+        this.gainNode.connect(this.wetGain);
+      } else {
+        // Fallback to direct connection
+        console.log('[BackgroundTrack] Direct connection to master (no spatial effects)');
+        this.gainNode.connect(this.masterGain);
+      }
 
       // Start playback
       this.sourceNode.start(0);
