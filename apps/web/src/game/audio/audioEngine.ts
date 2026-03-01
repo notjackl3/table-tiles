@@ -241,16 +241,18 @@ export class AudioEngine {
   /**
    * Play a random celebration sound for perfect hits
    * These are more elaborate than impact sounds (e.g., "Awesome!", "You're on fire!")
+   * @returns true if sound was played, false otherwise
    */
-  playRandomCelebration() {
+  playRandomCelebration(): boolean {
     // Only play celebration sounds occasionally (15% chance - reduced to avoid overlap with impact sounds)
-    if (Math.random() > 0.15) return;
+    if (Math.random() > 0.15) return false;
 
     const sound = this.celebrationSounds[
       Math.floor(Math.random() * this.celebrationSounds.length)
     ];
     // Celebration sounds respect hype level
     this.playSoundEffect(sound, 0.7, true);
+    return true;
   }
 
   /**

@@ -63,6 +63,16 @@ export function GamePage() {
   }
   const [audioWaves, setAudioWaves] = useState<AudioWave[]>([]);
 
+  // Text announcements
+  interface TextAnnouncement {
+    id: number;
+    text: string;
+    timestamp: number;
+    size: 'small' | 'medium' | 'large' | 'huge';
+    position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top' | 'bottom' | 'left' | 'right';
+  }
+  const [textAnnouncements, setTextAnnouncements] = useState<TextAnnouncement[]>([]);
+
   // Finger statistics for display
   const [fingerStats, setFingerStats] = useState([
     { name: 'L Middle', tile: 0, x: 0, y: 0, active: false },
@@ -253,6 +263,27 @@ export function GamePage() {
     }
   };
 
+  const addTextAnnouncement = (text: string, size: 'small' | 'medium' | 'large' | 'huge') => {
+    // Randomly select position outside the play area
+    const positions: Array<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top' | 'bottom' | 'left' | 'right'> =
+      ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'top', 'bottom', 'left', 'right'];
+    const randomPosition = positions[Math.floor(Math.random() * positions.length)];
+
+    const announcement: TextAnnouncement = {
+      id: Date.now() + Math.random(),
+      text,
+      timestamp: Date.now(),
+      size,
+      position: randomPosition
+    };
+    setTextAnnouncements(prev => [...prev, announcement]);
+
+    // Remove announcement after animation (2 seconds)
+    setTimeout(() => {
+      setTextAnnouncements(prev => prev.filter(a => a.id !== announcement.id));
+    }, 2000);
+  };
+
   const handleBackButton = () => {
     // Stop game loop if running
     if (gameLoopRef.current) {
@@ -264,10 +295,8 @@ export function GamePage() {
     audioEngine.stopBackgroundTrack();
     audioEngine.stopAllSounds();
 
-    // Reset game state - this will show the camera preview, settings panel, and song selection
-    setGameStarted(false);
-    setScore(0);
-    setCombo(0);
+    // Reload page to reset camera and show game selection
+    window.location.reload();
   };
 
   const startGame = () => {
@@ -291,6 +320,9 @@ export function GamePage() {
     if (voiceAnnouncementsEnabled) {
       setTimeout(() => {
         audioEngine.playGameStartSound();
+        // Determine announcement size based on hype level
+        const announcementSize = hypeLevel === 'high' ? 'huge' : hypeLevel === 'medium' ? 'large' : 'medium';
+        addTextAnnouncement('LET\'S GO!', announcementSize);
       }, 100); // Small delay to ensure audio is initialized
     }
 
@@ -369,8 +401,32 @@ export function GamePage() {
           // Play streak announcements (British announcer for streaks 2-6)
           audioEngine.playStreakAnnouncement(newCombo);
 
+          // Show streak 5 text
+          if (newCombo === 5) {
+            const size = hypeLevel === 'high' ? 'huge' : hypeLevel === 'medium' ? 'large' : 'medium';
+            addTextAnnouncement('5 STREAK!', size);
+          }
+
           // Play combo milestone sounds (10, 15, 20, 25)
           audioEngine.playComboMilestone(newCombo);
+
+          // Show combo milestone text with scaling size
+          const milestones = [10, 15, 20, 25];
+          if (milestones.includes(newCombo)) {
+            // Size increases with combo and hype level
+            let size: 'small' | 'medium' | 'large' | 'huge' = 'medium';
+            if (newCombo >= 25) {
+              size = hypeLevel === 'high' ? 'huge' : hypeLevel === 'medium' ? 'huge' : 'large';
+            } else if (newCombo >= 20) {
+              size = hypeLevel === 'high' ? 'huge' : hypeLevel === 'medium' ? 'large' : 'medium';
+            } else if (newCombo >= 15) {
+              size = hypeLevel === 'high' ? 'large' : 'medium';
+            } else {
+              size = hypeLevel === 'high' ? 'medium' : 'small';
+            }
+
+            addTextAnnouncement(`${newCombo} COMBO!`, size);
+          }
         }
 
         // Play celebration sound for perfect hits (occasionally) - only if voice effects enabled
@@ -769,6 +825,79 @@ export function GamePage() {
           )}
         </div>
       )}
+
+      {/* Text Announcements */}
+      {gameStarted && textAnnouncements.map((announcement) => {
+        const age = Date.now() - announcement.timestamp;
+
+        // Animation phases (2 seconds total):
+        // 0-300ms: Bouncy pop out (elastic effect)
+        // 300-1400ms: Stay visible
+        // 1400-2000ms: Fade out
+
+        let opacity = 1;
+        let scale = 1;
+
+        if (age < 300) {
+          // Bouncy pop-out animation
+          const progress = age / 300;
+          // Elastic easing out - overshoots then settles
+          const elasticProgress = progress < 0.6
+            ? progress * 2.5  // Fast scale up to 1.5
+            : 1.5 - (progress - 0.6) * 1.25; // Settle back to 1
+          scale = Math.max(0, elasticProgress);
+          opacity = Math.min(1, progress * 3); // Quick fade in
+        } else if (age > 1400) {
+          // Fade out phase
+          opacity = 1 - ((age - 1400) / 600);
+        }
+
+        // Font sizes based on announcement size
+        const fontSizes = {
+          small: '2.5rem',
+          medium: '4rem',
+          large: '6rem',
+          huge: '8rem'
+        };
+
+        // Position mapping - place around the game area
+        const positions = {
+          'top-left': { top: '10%', left: '10%', transform: `scale(${scale})` },
+          'top-right': { top: '10%', right: '10%', transform: `scale(${scale})` },
+          'bottom-left': { bottom: '15%', left: '10%', transform: `scale(${scale})` },
+          'bottom-right': { bottom: '15%', right: '10%', transform: `scale(${scale})` },
+          'top': { top: '5%', left: '50%', transform: `translate(-50%, 0) scale(${scale})` },
+          'bottom': { bottom: '10%', left: '50%', transform: `translate(-50%, 0) scale(${scale})` },
+          'left': { top: '50%', left: '5%', transform: `translate(0, -50%) scale(${scale})` },
+          'right': { top: '50%', right: '5%', transform: `translate(0, -50%) scale(${scale})` },
+        };
+
+        const positionStyle = positions[announcement.position];
+
+        return (
+          <div
+            key={announcement.id}
+            style={{
+              position: 'fixed',
+              ...positionStyle,
+              fontSize: fontSizes[announcement.size],
+              fontWeight: 900,
+              color: '#ffffff',
+              textShadow: '0 0 30px rgba(0,0,0,0.9), 0 0 60px rgba(255,255,255,0.5), 0 4px 8px rgba(0,0,0,0.8)',
+              opacity,
+              pointerEvents: 'none',
+              zIndex: 2000,
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.1em',
+              WebkitTextStroke: '2px rgba(0,0,0,0.8)',
+              transition: 'none',
+            }}
+          >
+            {announcement.text}
+          </div>
+        );
+      })}
 
       {/* Main game area with sidebar */}
       <div className="game-main" style={{ display: 'flex', padding: 0, gap: 0 }}>
