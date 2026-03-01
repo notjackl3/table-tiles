@@ -212,8 +212,8 @@ export class AudioEngine {
    * Volume adjusts based on hype level
    */
   playStreakAnnouncement(streak: number) {
-    // Play announcements for streaks 2-6
-    if (streak >= 2 && streak <= 6) {
+    // Play announcement only for streak 5
+    if (streak === 5) {
       this.playSoundEffect(`streak-${streak}`, 0.95, true);
     }
   }
@@ -567,10 +567,10 @@ export class AudioEngine {
   }
 
   /**
-   * Start background track playback
+   * Start background track playback from audio file
    */
-  startBackgroundTrack(beatmap: Beatmap) {
-    if (!this.audioContext || !this.dryGain || !this.wetGain || !this.masterGain) {
+  async startBackgroundTrack(beatmap: Beatmap) {
+    if (!this.audioContext || !this.masterGain) {
       console.warn('[AudioEngine] Cannot start background track: audio not initialized');
       return;
     }
@@ -580,14 +580,12 @@ export class AudioEngine {
       this.backgroundTrackPlayer = new BackgroundTrackPlayer({
         audioContext: this.audioContext,
         masterGain: this.masterGain,
-        dryGain: this.dryGain,
-        wetGain: this.wetGain,
         backgroundVolume: 0.20 // 20% volume for background track
       });
     }
 
-    this.backgroundTrackPlayer.start(beatmap);
-    console.log('[AudioEngine] Background track started - continuous playback mode');
+    await this.backgroundTrackPlayer.start(beatmap);
+    console.log('[AudioEngine] Background track started - audio file playback mode');
   }
 
   /**

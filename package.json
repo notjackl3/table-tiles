@@ -14,7 +14,9 @@
     "build": "npm run build --workspaces",
     "build:web": "npm run build --workspace=apps/web",
     "build:api": "npm run build --workspace=services/api",
-    "generate:sounds": "tsx scripts/generateSoundEffects.ts"
+    "generate:sounds": "tsx scripts/generateSoundEffects.ts",
+    "convert-midi": "node scripts/convert-midi-to-audio.js",
+    "update-beatmaps": "node scripts/update-beatmaps-with-audio.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

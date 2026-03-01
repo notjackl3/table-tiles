@@ -182,7 +182,6 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
           background: #ebe4d6;
           padding: 20px;
           color: #2c2416;
-          height: 100%;
           overflow-y: auto;
           border-right: 3px solid #d4c7b0;
         }
@@ -394,7 +393,7 @@ export function SettingsPanel({ visionLoop }: SettingsPanelProps) {
 
         .no-hands-message {
           text-align: center;
-          padding: 20px;
+          padding: 12px;
           color: #5a4d3a;
           font-style: italic;
           font-size: 0.85rem;

@@ -17,6 +17,7 @@ export interface Beatmap {
   bpm: number;
   duration: number; // ms
   notes: BeatmapNote[];
+  audioFile?: string; // Optional path to pre-rendered audio file (MP3/WAV) for background music
 }
 
 /**

@@ -14,6 +14,7 @@ import {
 } from './import/songGenerator';
 import type { ExtractionStrategy } from './import/melodyExtractor';
 import { getDefaultOMRConfig, checkOMRServiceAvailability, OMR_SETUP_INSTRUCTIONS } from './import/omrService';
+import { convertMIDIToAudio, uploadAudioFile, type ConversionProgress } from './import/midiToAudioConverter';
 
 interface MusicImporterProps {
   onImportComplete?: (songId: string) => void;
@@ -26,6 +27,7 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [omrAvailable, setOmrAvailable] = useState<boolean | null>(null);
+  const [audioProgress, setAudioProgress] = useState<ConversionProgress | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,6 +57,7 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
     setIsProcessing(true);
     setError(null);
     setImportResult(null);
+    setAudioProgress(null);
 
     try {
       const options: SongImportOptions = {
@@ -69,6 +72,43 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
 
       if (importType === 'midi') {
         result = await importFromMIDI(file, options);
+
+        // Generate background audio from MIDI file
+        try {
+          console.log('[Music Importer] Converting MIDI to audio...');
+          const audioResult = await convertMIDIToAudio(file, (progress) => {
+            setAudioProgress(progress);
+          });
+
+          // Upload audio file to server
+          setAudioProgress({
+            status: 'encoding',
+            progress: 90,
+            message: 'Uploading audio file...'
+          });
+
+          const audioPath = await uploadAudioFile(audioResult.audioBlob, result.beatmap.id);
+          console.log('[Music Importer] Audio uploaded to:', audioPath);
+
+          // Update beatmap with audio file path
+          result.beatmap.audioFile = audioPath;
+
+          setAudioProgress({
+            status: 'complete',
+            progress: 100,
+            message: 'Audio generation complete!'
+          });
+
+        } catch (audioError) {
+          console.warn('[Music Importer] Audio generation failed:', audioError);
+          // Don't fail the entire import - just log the warning
+          result.warnings.push('Background audio generation failed. Song will use synthesized audio.');
+          setAudioProgress({
+            status: 'error',
+            progress: 0,
+            message: 'Audio generation failed (song will use synthesized audio)'
+          });
+        }
       } else {
         const omrConfig = getDefaultOMRConfig();
         result = await importFromSheetMusic(file, options, omrConfig);
@@ -286,29 +326,6 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
             </select>
           </div>
 
-          {/* Manual BPM */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
-              Manual BPM (Optional)
-            </label>
-            <input
-              type="number"
-              value={manualBPM || ''}
-              onChange={(e) => setManualBPM(e.target.value ? parseInt(e.target.value) : undefined)}
-              placeholder="Auto-detect from file"
-              min="60"
-              max="200"
-              style={{
-                width: '100%',
-                padding: '8px',
-                border: '2px solid #d4c7b0',
-                borderRadius: '4px',
-                fontSize: '0.9rem',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
           {/* File Input */}
           <input
             ref={fileInputRef}
@@ -340,6 +357,38 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
           >
             {isProcessing ? 'Processing...' : `Select ${importType === 'midi' ? 'MIDI' : 'Image'} File`}
           </button>
+
+          {/* Audio Conversion Progress */}
+          {audioProgress && audioProgress.status !== 'complete' && (
+            <div style={{
+              marginTop: '12px',
+              padding: '12px',
+              background: audioProgress.status === 'error' ? '#ffe6e6' : '#e6f7ff',
+              border: `2px solid ${audioProgress.status === 'error' ? '#c75450' : '#6fa87a'}`,
+              borderRadius: '4px',
+              color: '#5a4d3a',
+              fontSize: '0.85rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <strong>{audioProgress.message}</strong>
+                <span>{audioProgress.progress}%</span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: '8px',
+                background: '#d4c7b0',
+                borderRadius: '4px',
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  width: `${audioProgress.progress}%`,
+                  height: '100%',
+                  background: audioProgress.status === 'error' ? '#c75450' : '#6fa87a',
+                  transition: 'width 0.3s ease'
+                }} />
+              </div>
+            </div>
+          )}
 
           {/* Error Display */}
           {error && (
@@ -376,6 +425,11 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
                 <div>Lane Distribution: {importResult.stats.laneDistribution.join(', ')}</div>
                 <div>Note Variety: {importResult.stats.noteVariety.uniqueNotes} unique notes</div>
                 <div>Max Repetition: {importResult.stats.noteVariety.longestRepetition} consecutive</div>
+                {importResult.beatmap.audioFile && (
+                  <div style={{ marginTop: '4px', color: '#6fa87a', fontWeight: 'bold' }}>
+                    Background audio: Generated ✓
+                  </div>
+                )}
               </div>
 
               {importResult.warnings.length > 0 && (

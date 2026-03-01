@@ -5,6 +5,7 @@ import { healthRouter } from './routes/health.js';
 import { createLeaderboardRouter } from './routes/leaderboard.js';
 import { songsRouter } from './routes/songs.js';
 import { soundsRouter } from './routes/sounds.js';
+import { audioRouter } from './routes/audio.js';
 
 const PORT = process.env.PORT || 3001;
 const app = express();
@@ -21,6 +22,7 @@ app.use('/', healthRouter);
 app.use('/', createLeaderboardRouter(db));
 app.use('/', songsRouter);
 app.use('/', soundsRouter);
+app.use('/', audioRouter);
 
 // Start server
 app.listen(PORT, () => {

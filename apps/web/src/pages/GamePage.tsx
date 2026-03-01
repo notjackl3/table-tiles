@@ -56,6 +56,13 @@ export function GamePage() {
   }
   const [hitHighlights, setHitHighlights] = useState<HitHighlight[]>([]);
 
+  // Audio wave effects
+  interface AudioWave {
+    lane: number;
+    timestamp: number;
+  }
+  const [audioWaves, setAudioWaves] = useState<AudioWave[]>([]);
+
   // Finger statistics for display
   const [fingerStats, setFingerStats] = useState([
     { name: 'L Middle', tile: 0, x: 0, y: 0, active: false },
@@ -246,6 +253,23 @@ export function GamePage() {
     }
   };
 
+  const handleBackButton = () => {
+    // Stop game loop if running
+    if (gameLoopRef.current) {
+      gameLoopRef.current.stop();
+      gameLoopRef.current = null;
+    }
+
+    // Stop audio engine and background track
+    audioEngine.stopBackgroundTrack();
+    audioEngine.stopAllSounds();
+
+    // Reset game state - this will show the camera preview, settings panel, and song selection
+    setGameStarted(false);
+    setScore(0);
+    setCombo(0);
+  };
+
   const startGame = () => {
     console.log('[GamePage] Starting game...');
 
@@ -304,9 +328,16 @@ export function GamePage() {
       onHit: (lane, quality, noteFrequency, timestamp) => {
         // Add green highlight for successful hit
         console.log('[GamePage] Successful hit!', lane, quality, noteFrequency, timestamp);
+        const now = performance.now();
+
         setHitHighlights((prev) => {
-          const now = performance.now();
           const filtered = prev.filter((h) => now - h.timestamp < 500);
+          return [...filtered, { lane, timestamp: now }];
+        });
+
+        // Add audio wave effect
+        setAudioWaves((prev) => {
+          const filtered = prev.filter((w) => now - w.timestamp < 1000); // Keep waves for 1 second
           return [...filtered, { lane, timestamp: now }];
         });
 
@@ -414,8 +445,40 @@ export function GamePage() {
       ctx.fillStyle = 'rgba(139, 115, 85, 0.1)';
       ctx.fillRect(0, hitLineY - 60, width, 60);
 
-      // Draw white flash tiles (ghost tiles from finger taps)
+      // Draw audio wave effects (horizontal waves in background)
       const now = performance.now();
+      audioWaves.forEach((wave) => {
+        const age = now - wave.timestamp;
+        if (age < 1000) { // Show for 1 second
+          const opacity = 1 - (age / 1000); // Fade out
+          const amplitude = 15 * (1 - age / 1000); // Wave height decreases over time
+          const frequency = 0.02; // Wave frequency
+          const speed = age * 0.003; // Animation speed
+
+          // Draw multiple horizontal waves across the background
+          for (let waveNum = 0; waveNum < 3; waveNum++) {
+            const yOffset = (height / 4) * (waveNum + 1); // Spread waves vertically
+            const waveOpacity = opacity * (1 - waveNum * 0.2); // Each wave slightly more transparent
+
+            ctx.strokeStyle = `rgba(139, 115, 85, ${waveOpacity * 0.4})`; // Light brown
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            // Draw sine wave across the width
+            for (let x = 0; x <= width; x += 5) {
+              const y = yOffset + Math.sin((x * frequency) + speed + (waveNum * 0.5)) * amplitude;
+              if (x === 0) {
+                ctx.moveTo(x, y);
+              } else {
+                ctx.lineTo(x, y);
+              }
+            }
+            ctx.stroke();
+          }
+        }
+      });
+
+      // Draw white flash tiles (ghost tiles from finger taps)
       flashTiles.forEach((flash) => {
         const age = now - flash.timestamp;
         if (age < 300) { // Show for 300ms
@@ -518,7 +581,7 @@ export function GamePage() {
     };
 
     render();
-  }, [gameStarted, flashTiles, hitHighlights]);
+  }, [gameStarted, flashTiles, hitHighlights, audioWaves]);
 
   // Animate screen shake
   useEffect(() => {
@@ -719,7 +782,7 @@ export function GamePage() {
             display: 'flex',
             flexDirection: 'column',
           }}>
-            <div style={{ flex: 1, overflowY: 'auto' }}>
+            <div style={{ flex: '0 1 auto', overflowY: 'auto' }}>
               <SettingsPanel visionLoop={visionLoopRef.current} />
 
               {/* Hype Level Selector */}
@@ -1001,7 +1064,7 @@ export function GamePage() {
       {/* Back button */}
       <button
         className="button"
-        onClick={() => navigate('/')}
+        onClick={handleBackButton}
         style={{
           position: 'fixed',
           top: '20px',

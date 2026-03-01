@@ -8,6 +8,7 @@ import { noteToFrequency } from '../audio/noteConverter';
 import simpleMelodyData from './simpleMelody.json';
 import riverFlowsInYouData from './riverFlowsInYou.json';
 import somethingJustLikeThisData from './something-just-like-this.json';
+import aSkyFullOfStarsData from './a-sky-full-of-stars.json';
 import { getAllImportedSongs } from '../import/songGenerator';
 
 export interface SongMetadata {
@@ -44,6 +45,14 @@ const BUILTIN_SONGS: SongMetadata[] = [
     bpm: 104,
     duration: 18500,
     difficulty: 'easy'
+  },
+  {
+    id: 'a-sky-full-of-stars',
+    name: 'A Sky Full of Stars',
+    artist: 'Coldplay',
+    bpm: 124,
+    duration: 268000,
+    difficulty: 'medium'
   }
 ];
 
@@ -90,6 +99,9 @@ export function loadSong(songId: string): Beatmap {
       break;
     case 'something-just-like-this':
       beatmap = somethingJustLikeThisData as Beatmap;
+      break;
+    case 'a-sky-full-of-stars':
+      beatmap = aSkyFullOfStarsData as Beatmap;
       break;
     default:
       // Try loading from imported songs
