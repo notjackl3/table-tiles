@@ -1,20 +1,111 @@
-# 🎹 TableTiles
+# 🎹 Hands Tiles
 
-> Turn any desk into a rhythm game
+> Turn your hands into a rhythm game controller
 
-TableTiles is a browser-based Piano Tiles-style rhythm game where falling tiles are hit by tapping your **physical table** with your fingers. Uses webcam + MediaPipe Hands for real-time hand tracking and computer vision-based tap detection.
+Hands Tiles is a browser-based Piano Tiles-style rhythm game where falling tiles are hit by tapping **any flat surface** with your fingers. Uses webcam + MediaPipe Hands for real-time hand tracking and computer vision-based tap detection.
 
-![TableTiles Demo](docs/gameplay.png)
+![Hands Tiles Demo](pic1.png)
+![Hands Tiles Gameplay](pic2.png)
 
 ## Features
 
-- 🎮 **Piano Tiles gameplay** on any flat surface
-- 🤖 **Real-time hand tracking** using MediaPipe Hands
-- 📐 **Table calibration system** with homography mapping
-- 🎵 **Web Audio API** for zero-latency sound
-- 🏆 **Leaderboard system** with score persistence
-- 🎯 **Tap detection** using velocity-based algorithms
-- 👁️ **Debug mode** showing all 21 hand landmarks
+### 🎮 Core Gameplay
+- **Hand-Controlled Rhythm Game** - Piano Tiles gameplay using just your hands and a webcam
+- **4-Lane System** - Tiles fall across 4 lanes mapped to your play area
+- **Scoring** - Perfect (100pts), Good (50pts), Miss (0pts) based on timing
+- **Combo System** - Build streaks with milestones at 5, 10, 15, 20, 25+ combos
+- **Lives System** - 3 lives with penalty for missed tiles
+
+### 👁️ Computer Vision & Hand Tracking
+- **MediaPipe Hands** - Real-time tracking of 21 hand landmarks
+- **Multi-Finger Support** - Simultaneous tracking of all 5 fingertips
+- **Velocity-Based Tap Detection** - State machine algorithm (idle → moving_down → tapped → lifting)
+- **Position Smoothing** - EMA filter with rolling window velocity tracking
+- **Cooldown System** - 150ms per-finger cooldown prevents double-taps
+
+### 📐 Play Area Calibration
+- **Homography Mapping** - 4-corner calibration transforms camera to play area coordinates
+- **Interactive Setup** - Visual click-to-mark interface with real-time feedback
+- **Test Mode** - Verify lane mapping before saving
+- **Persistent Storage** - Calibration saved across sessions in localStorage
+
+### 🎵 Advanced Audio System
+- **Web Audio API** - Zero-latency programmatic sound generation
+- **3D Spatial Audio** - Panner nodes position sounds in 3D space per lane
+- **Reverb & Echo** - Convolver with dry/wet mix (60/40) and 150ms delay
+- **Dynamic Compression** - Prevents clipping and normalizes volume
+- **Lane-Specific Notes** - Musical notes (C4, E4, G4, B4) mapped to lanes
+- **Hit Quality Feedback** - Different tones for perfect/good/miss
+
+### 🎤 Voice & Sound Effects
+- **Voice Announcements** - Combo celebrations ("5 STREAK!", "ON FIRE!")
+- **Celebration Sounds** - Random effects (awesome, perfect, boom, yeah, on-fire)
+- **Impact Sounds** - Audio feedback on successful hits
+- **Game Start Announcement** - "LET'S GO!" with customizable intensity
+- **3-Tier Hype System** - Low/Medium/High intensity levels
+
+### 🎹 Music Import System
+- **MIDI Import** - Parse MIDI files to generate beatmaps
+- **Sheet Music OCR** - Optical Music Recognition for sheet music images
+- **MP3 Background Music** - Upload audio with auto-normalization (up to 5x boost)
+- **Random Note Generation** - Create playable beatmaps from MP3-only imports
+- **Polyphony Handling** - 4 extraction strategies (melody-line, highest-note, smart-lanes, round-robin)
+- **Note Spacing Control** - Minimum 400ms spacing, manual BPM override
+- **Duplicate Prevention** - Rejects imports with existing song names
+
+### 🎼 Background Music Player
+- **MP3/WAV Playback** - Pre-rendered audio file support
+- **Auto-Normalization** - Analyzes peak volume and boosts quiet audio
+- **Synchronized Playback** - Perfect timing with game loop
+- **Volume Balancing** - Background at 20%, player notes louder
+- **MIDI-to-Audio** - Server-side conversion using FluidSynth
+
+### ✨ Visual Effects
+- **Screen Shake** - Subtle shake on perfect hits (200ms)
+- **White Flash** - Full-screen flash for perfect notes
+- **Hit Highlights** - Green flash effects on successful hits
+- **Audio Wave Visualization** - Animated sine waves on note hits
+- **Column Glow** - White sparkle rising up lane columns
+- **Flash Tiles** - White feedback on tap (300ms fade)
+- **Text Announcements** - Dynamic overlays with elastic scaling and random positioning
+
+### 📚 Interactive Tutorial
+- **Voice-Narrated Guide** - Step-by-step walkthrough with AI narration
+- **8 Tutorial Steps** - Covers all features from settings to gameplay
+- **Visual Highlighting** - Tooltips with element highlighting
+- **Progress Tracking** - Tracks completed steps
+- **Navigation Controls** - Forward/backward through steps
+
+### ⚙️ Settings & Customization
+- **Detection Tuning** - Adjustable sensitivity, velocity threshold, cooldown
+- **Real-Time Feedback** - Live finger state display
+- **Hype Level Control** - Low/Medium/High announcer enthusiasm
+- **Toggle Switches** - Voice announcements, voice effects, visual effects, screen shake
+- **3D Audio Test** - 360° spatial audio preview
+
+### 🎯 Song Management
+- **Song Browser** - Scrollable list with metadata display
+- **Song Preview** - 10-second melody preview
+- **High Score Display** - Personal best for each song
+- **Difficulty Colors** - Visual coding (Easy=green, Medium=yellow, Hard=red)
+- **Delete Function** - Remove imported songs (built-in protected)
+- **Persistent Storage** - Songs saved to localStorage and API
+
+### 🏆 Scoring & Progression
+- **High Score Tracking** - Per-song personal bests with accuracy
+- **Accuracy Calculation** - (hits / total notes) × 100%
+- **Score Persistence** - localStorage-based storage
+- **New Record Detection** - Alerts on beating previous best
+- **Stats Display** - Final score, accuracy, high score comparison
+
+### 🔧 Technical Features
+- **Monorepo Architecture** - Apps, Services, Shared types
+- **TypeScript** - Full type safety across stack
+- **React + Vite** - Modern frontend with fast HMR
+- **Express API** - Backend for song storage
+- **SQLite Database** - Score persistence infrastructure
+- **Decoupled Loops** - 30fps vision, 60fps render
+- **Performance Optimized** - Smoothing filters, efficient canvas rendering
 
 ## Tech Stack
 
@@ -76,14 +167,14 @@ When you first load the app, your browser will request camera access. This is re
 
 ## How to Play
 
-### 1. Calibrate Your Table
+### 1. Calibrate Your Play Area
 
-On first launch, click **"Calibrate Table"**:
+On first launch, click **"Calibrate Play Area"**:
 
-1. Click the **4 corners** of your table area in order:
+1. Click the **4 corners** of your play area in order:
    - Top-left → Top-right → Bottom-right → Bottom-left
-2. The system will compute a homography matrix to map camera pixels to table coordinates
-3. **Test mode**: Click anywhere on the table to verify the lane mapping
+2. The system will compute a homography matrix to map camera pixels to play area coordinates
+3. **Test mode**: Click anywhere in the play area to verify the lane mapping
 4. Click **"Save & Continue"** when satisfied
 
 Calibration is saved to localStorage and persists between sessions.
@@ -92,7 +183,7 @@ Calibration is saved to localStorage and persists between sessions.
 
 1. Click **"Start Game"**
 2. Tiles will fall in 4 lanes
-3. **Tap the table** where a tile crosses the green hit line
+3. **Tap any flat surface** where a tile crosses the green hit line
 4. Score increases based on timing:
    - **Perfect**: ±30px from hit line (100 points)
    - **Good**: ±60px from hit line (50 points)
@@ -118,7 +209,7 @@ IDLE → MOVING_DOWN → TAPPED → LIFTING → IDLE
 
 **Tap trigger conditions:**
 1. Fingertip Y-velocity > threshold (moving downward)
-2. Fingertip is within calibrated table bounds
+2. Fingertip is within calibrated play area bounds
 3. Not in cooldown period (prevents double-taps)
 
 **Smoothing:**
@@ -178,10 +269,10 @@ Submit a score
 - Try adjusting camera angle
 
 ### Taps not registering
-- Re-calibrate the table area
+- Re-calibrate the play area
 - Ensure you're tapping within the calibrated zone
 - Try tapping more deliberately (faster downward motion)
-- Check that table surface is flat and stable
+- Check that your surface is flat and stable
 
 ### Audio not playing
 - Click anywhere on the page to initialize audio context
@@ -224,7 +315,7 @@ npm run build:api    # Build backend only
 ### Coordinate Spaces
 
 1. **Video Pixels**: Raw MediaPipe landmark coordinates (normalized 0-1)
-2. **Table UV**: Homography-transformed coordinates on table plane (0-1)
+2. **Play Area UV**: Homography-transformed coordinates on play area plane (0-1)
 3. **Game Space**: Canvas pixel coordinates for rendering
 
 ### Performance
@@ -246,7 +337,7 @@ All sounds are generated using Web Audio API:
 
 - [ ] Two-hand support + multi-lane chords
 - [ ] Beatmap editor (record taps → export JSON)
-- [ ] Auto table detection using OpenCV edge detection
+- [ ] Auto surface detection using OpenCV edge detection
 - [ ] Replay mode (store taps + tile spawns)
 - [ ] WebSocket live spectators scoreboard
 - [ ] Multiple difficulty levels
@@ -266,4 +357,4 @@ MIT
 
 ---
 
-**Tagline:** "Turn any desk into a rhythm game." 🎹✨
+**Tagline:** "Turn your hands into a rhythm game controller." 🎹✨
