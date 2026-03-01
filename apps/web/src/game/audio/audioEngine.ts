@@ -3,6 +3,9 @@
  * Generates sounds programmatically for zero-latency feedback
  */
 
+import { BackgroundTrackPlayer } from './backgroundTrackPlayer';
+import type { Beatmap } from '../engine/beatmap';
+
 export type HitQuality = 'perfect' | 'good' | 'miss';
 export type HypeLevel = 'low' | 'medium' | 'high';
 
@@ -14,6 +17,7 @@ export class AudioEngine {
   private wetGain: GainNode | null = null;
   private enabled = true;
   private hypeLevel: HypeLevel = 'medium';
+  private backgroundTrackPlayer: BackgroundTrackPlayer | null = null;
 
   // Preloaded sound effects
   private soundEffects: Map<string, AudioBuffer> = new Map();
@@ -276,65 +280,87 @@ export class AudioEngine {
    * Play hit sound for a lane
    * @param lane - The lane number (0-3)
    * @param quality - The hit quality
-   * @param customFrequency - Optional custom frequency for melodic playback
+   * @param customFrequency - Optional custom frequency or array of frequencies for melodic playback
    */
-  playHitSound(lane: number, quality: HitQuality, customFrequency?: number) {
+  playHitSound(lane: number, quality: HitQuality, customFrequency?: number | number[]) {
     if (!this.enabled || !this.audioContext || !this.dryGain || !this.wetGain) return;
 
-    // Use custom frequency if provided, otherwise use default lane frequency
-    const frequency = customFrequency ?? this.laneFrequencies[lane % 4];
+    // Check if we're playing multiple frequencies (chord/cluster)
+    const isMultiNote = Array.isArray(customFrequency);
+    const frequencies = isMultiNote
+      ? customFrequency
+      : [customFrequency ?? this.laneFrequencies[lane % 4]];
+
+    // Volume normalization for multiple notes to prevent clipping
+    const volumeMultiplier = isMultiNote ? 1 / Math.sqrt(frequencies.length) : 1;
+
     const now = this.audioContext.currentTime;
 
-    // Create oscillator for the note
-    const oscillator = this.audioContext.createOscillator();
-    const gainNode = this.audioContext.createGain();
-
-    // Create 3D panner for spatial audio
-    const panner = this.audioContext.createPanner();
-    panner.panningModel = 'HRTF'; // Head-Related Transfer Function for realistic 3D audio
-    panner.distanceModel = 'inverse';
-    panner.refDistance = 1;
-    panner.maxDistance = 10000;
-    panner.rolloffFactor = 1;
-    panner.coneInnerAngle = 360;
-    panner.coneOuterAngle = 0;
-    panner.coneOuterGain = 0;
-
-    // Set position based on lane
-    const pos = this.lanePositions[lane % 4];
-    panner.positionX.setValueAtTime(pos.x, now);
-    panner.positionY.setValueAtTime(pos.y, now);
-    panner.positionZ.setValueAtTime(pos.z, now);
-
-    // For melodic notes (when customFrequency is provided), always use sine wave for consistent sound
-    // Otherwise, use different waveforms for different hit qualities
-    if (customFrequency) {
-      oscillator.type = 'sine'; // Consistent melodic sound
-    } else {
-      oscillator.type = quality === 'perfect' ? 'sine' : quality === 'good' ? 'triangle' : 'sawtooth';
-    }
-
-    oscillator.frequency.setValueAtTime(frequency, now);
-
-    // ADSR envelope - longer sustain for melodic notes
+    // ADSR envelope parameters - longer sustain for melodic notes
     const attackTime = 0.005;
     const decayTime = customFrequency ? 0.15 : (quality === 'perfect' ? 0.1 : quality === 'good' ? 0.08 : 0.05);
     const sustainLevel = customFrequency ? 0.4 : (quality === 'perfect' ? 0.3 : quality === 'good' ? 0.2 : 0.1);
     const releaseTime = customFrequency ? 0.3 : (quality === 'perfect' ? 0.2 : quality === 'good' ? 0.15 : 0.1);
 
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(0.5, now + attackTime);
-    gainNode.gain.linearRampToValueAtTime(sustainLevel, now + attackTime + decayTime);
-    gainNode.gain.linearRampToValueAtTime(0, now + attackTime + decayTime + releaseTime);
+    console.log(`[AudioEngine] Playing ${frequencies.length} note(s) at volume ${volumeMultiplier.toFixed(2)}x:`, frequencies);
 
-    // Connect: oscillator -> gain -> panner -> dry/wet split
-    oscillator.connect(gainNode);
-    gainNode.connect(panner);
-    panner.connect(this.dryGain);
-    panner.connect(this.wetGain);
+    // Create oscillator for each frequency
+    frequencies.forEach((frequency) => {
+      // Create oscillator for the note
+      const oscillator = this.audioContext!.createOscillator();
+      const gainNode = this.audioContext!.createGain();
 
-    oscillator.start(now);
-    oscillator.stop(now + attackTime + decayTime + releaseTime);
+      // Create 3D panner for spatial audio
+      const panner = this.audioContext!.createPanner();
+      panner.panningModel = 'HRTF'; // Head-Related Transfer Function for realistic 3D audio
+      panner.distanceModel = 'inverse';
+      panner.refDistance = 1;
+      panner.maxDistance = 10000;
+      panner.rolloffFactor = 1;
+      panner.coneInnerAngle = 360;
+      panner.coneOuterAngle = 0;
+      panner.coneOuterGain = 0;
+
+      // Set position: centered for multi-note, lane-based for single note
+      if (isMultiNote) {
+        // Center position for cohesive chord sound
+        panner.positionX.setValueAtTime(0, now);
+        panner.positionY.setValueAtTime(0, now);
+        panner.positionZ.setValueAtTime(-2, now);
+      } else {
+        // Lane-based position for single notes
+        const pos = this.lanePositions[lane % 4];
+        panner.positionX.setValueAtTime(pos.x, now);
+        panner.positionY.setValueAtTime(pos.y, now);
+        panner.positionZ.setValueAtTime(pos.z, now);
+      }
+
+      // For melodic notes (when customFrequency is provided), always use sine wave for consistent sound
+      // Otherwise, use different waveforms for different hit qualities
+      if (customFrequency) {
+        oscillator.type = 'sine'; // Consistent melodic sound
+      } else {
+        oscillator.type = quality === 'perfect' ? 'sine' : quality === 'good' ? 'triangle' : 'sawtooth';
+      }
+
+      oscillator.frequency.setValueAtTime(frequency, now);
+
+      // Apply ADSR envelope with volume normalization
+      const baseVolume = 0.5 * volumeMultiplier;
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(baseVolume, now + attackTime);
+      gainNode.gain.linearRampToValueAtTime(sustainLevel * volumeMultiplier, now + attackTime + decayTime);
+      gainNode.gain.linearRampToValueAtTime(0, now + attackTime + decayTime + releaseTime);
+
+      // Connect: oscillator -> gain -> panner -> dry/wet split
+      oscillator.connect(gainNode);
+      gainNode.connect(panner);
+      panner.connect(this.dryGain!);
+      panner.connect(this.wetGain!);
+
+      oscillator.start(now);
+      oscillator.stop(now + attackTime + decayTime + releaseTime);
+    });
   }
 
   /**
@@ -541,9 +567,44 @@ export class AudioEngine {
   }
 
   /**
+   * Start background track playback
+   */
+  startBackgroundTrack(beatmap: Beatmap) {
+    if (!this.audioContext || !this.dryGain || !this.wetGain || !this.masterGain) {
+      console.warn('[AudioEngine] Cannot start background track: audio not initialized');
+      return;
+    }
+
+    // Create background track player if it doesn't exist
+    if (!this.backgroundTrackPlayer) {
+      this.backgroundTrackPlayer = new BackgroundTrackPlayer({
+        audioContext: this.audioContext,
+        masterGain: this.masterGain,
+        dryGain: this.dryGain,
+        wetGain: this.wetGain,
+        backgroundVolume: 0.20 // 20% volume for background track
+      });
+    }
+
+    this.backgroundTrackPlayer.start(beatmap);
+    console.log('[AudioEngine] Background track started - continuous playback mode');
+  }
+
+  /**
+   * Stop background track playback
+   */
+  stopBackgroundTrack() {
+    if (this.backgroundTrackPlayer) {
+      this.backgroundTrackPlayer.stop();
+      console.log('[AudioEngine] Background track stopped');
+    }
+  }
+
+  /**
    * Close audio context
    */
   close() {
+    this.stopBackgroundTrack();
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
@@ -551,6 +612,7 @@ export class AudioEngine {
       this.convolver = null;
       this.dryGain = null;
       this.wetGain = null;
+      this.backgroundTrackPlayer = null;
     }
   }
 }

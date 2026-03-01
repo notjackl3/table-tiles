@@ -282,6 +282,9 @@ export function GamePage() {
       onGameOver: (stats) => {
         console.log('[GamePage] Game over:', stats);
 
+        // Stop background track
+        audioEngine.stopBackgroundTrack();
+
         // Save high score
         if (selectedSongId) {
           const isNewHighScore = saveHighScore(selectedSongId, stats.score, stats.accuracy);
@@ -298,16 +301,17 @@ export function GamePage() {
 
         setGameStarted(false);
       },
-      onHit: (lane, quality, noteFrequency) => {
+      onHit: (lane, quality, noteFrequency, timestamp) => {
         // Add green highlight for successful hit
-        console.log('[GamePage] Successful hit!', lane, quality, noteFrequency);
+        console.log('[GamePage] Successful hit!', lane, quality, noteFrequency, timestamp);
         setHitHighlights((prev) => {
           const now = performance.now();
           const filtered = prev.filter((h) => now - h.timestamp < 500);
           return [...filtered, { lane, timestamp: now }];
         });
 
-        // Play melodic sound with noteFrequency if available
+        // Play melodic sound LOUD (player's hit emphasis)
+        // Background track plays continuously at low volume, player hits play on top
         audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
 
         // Play impact sound for successful hits (boom, bam) - only if voice effects enabled
@@ -349,6 +353,11 @@ export function GamePage() {
 
     // Load beatmap from selected song
     const beatmap = loadSong(selectedSongId);
+
+    // Start background track (plays all notes quietly)
+    audioEngine.startBackgroundTrack(beatmap);
+    console.log('[GamePage] Background track started');
+
     gameLoop.start(beatmap);
 
     setGameStarted(true);
@@ -778,128 +787,92 @@ export function GamePage() {
                   gap: '6px',
                 }}>
                   {/* Voice Announcements Toggle */}
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    background: '#ffffff',
-                    border: '2px solid #d4c7b0',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    <span style={{
+                  <button
+                    onClick={() => setVoiceAnnouncementsEnabled(!voiceAnnouncementsEnabled)}
+                    style={{
+                      padding: '8px 12px',
+                      background: voiceAnnouncementsEnabled ? '#8b7355' : '#ffffff',
+                      color: voiceAnnouncementsEnabled ? '#ffffff' : '#5a4d3a',
+                      border: `2px solid ${voiceAnnouncementsEnabled ? '#8b7355' : '#d4c7b0'}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
                       fontSize: '0.85rem',
-                      color: '#5a4d3a',
-                      fontWeight: '500',
-                    }}>
-                      🎙️ Announcements
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={voiceAnnouncementsEnabled}
-                      onChange={(e) => setVoiceAnnouncementsEnabled(e.target.checked)}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer',
-                      }}
-                    />
-                  </label>
+                      fontWeight: voiceAnnouncementsEnabled ? 'bold' : 'normal',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>Announcements</span>
+                    {voiceAnnouncementsEnabled && <span>✓</span>}
+                  </button>
 
                   {/* Voice Effects Toggle */}
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    background: '#ffffff',
-                    border: '2px solid #d4c7b0',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    <span style={{
+                  <button
+                    onClick={() => setVoiceEffectsEnabled(!voiceEffectsEnabled)}
+                    style={{
+                      padding: '8px 12px',
+                      background: voiceEffectsEnabled ? '#8b7355' : '#ffffff',
+                      color: voiceEffectsEnabled ? '#ffffff' : '#5a4d3a',
+                      border: `2px solid ${voiceEffectsEnabled ? '#8b7355' : '#d4c7b0'}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
                       fontSize: '0.85rem',
-                      color: '#5a4d3a',
-                      fontWeight: '500',
-                    }}>
-                      🎉 Voice Effects
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={voiceEffectsEnabled}
-                      onChange={(e) => setVoiceEffectsEnabled(e.target.checked)}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer',
-                      }}
-                    />
-                  </label>
+                      fontWeight: voiceEffectsEnabled ? 'bold' : 'normal',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>Voice Effects</span>
+                    {voiceEffectsEnabled && <span>✓</span>}
+                  </button>
 
                   {/* Visual Effects Toggle */}
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    background: '#ffffff',
-                    border: '2px solid #d4c7b0',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    <span style={{
+                  <button
+                    onClick={() => setVisualEffectsEnabled(!visualEffectsEnabled)}
+                    style={{
+                      padding: '8px 12px',
+                      background: visualEffectsEnabled ? '#8b7355' : '#ffffff',
+                      color: visualEffectsEnabled ? '#ffffff' : '#5a4d3a',
+                      border: `2px solid ${visualEffectsEnabled ? '#8b7355' : '#d4c7b0'}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
                       fontSize: '0.85rem',
-                      color: '#5a4d3a',
-                      fontWeight: '500',
-                    }}>
-                      ✨ Visual Effects
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={visualEffectsEnabled}
-                      onChange={(e) => setVisualEffectsEnabled(e.target.checked)}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer',
-                      }}
-                    />
-                  </label>
+                      fontWeight: visualEffectsEnabled ? 'bold' : 'normal',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>Visual Effects</span>
+                    {visualEffectsEnabled && <span>✓</span>}
+                  </button>
 
                   {/* Screen Shake Toggle */}
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 10px',
-                    background: '#ffffff',
-                    border: '2px solid #d4c7b0',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    <span style={{
+                  <button
+                    onClick={() => setScreenShakeEnabled(!screenShakeEnabled)}
+                    style={{
+                      padding: '8px 12px',
+                      background: screenShakeEnabled ? '#8b7355' : '#ffffff',
+                      color: screenShakeEnabled ? '#ffffff' : '#5a4d3a',
+                      border: `2px solid ${screenShakeEnabled ? '#8b7355' : '#d4c7b0'}`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
                       fontSize: '0.85rem',
-                      color: '#5a4d3a',
-                      fontWeight: '500',
-                    }}>
-                      📳 Screen Shake
-                    </span>
-                    <input
-                      type="checkbox"
-                      checked={screenShakeEnabled}
-                      onChange={(e) => setScreenShakeEnabled(e.target.checked)}
-                      style={{
-                        width: '18px',
-                        height: '18px',
-                        cursor: 'pointer',
-                      }}
-                    />
-                  </label>
+                      fontWeight: screenShakeEnabled ? 'bold' : 'normal',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>Screen Shake</span>
+                    {screenShakeEnabled && <span>✓</span>}
+                  </button>
                 </div>
               </div>
             </div>

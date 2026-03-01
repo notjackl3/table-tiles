@@ -62,7 +62,13 @@ export function getAvailableSongs(): SongMetadata[] {
     difficulty: 'medium' as const // Default difficulty for imported songs
   }));
 
-  return [...BUILTIN_SONGS, ...importedMetadata];
+  // Combine and filter out duplicates (built-in songs take precedence)
+  const allSongs = [...BUILTIN_SONGS, ...importedMetadata];
+  const uniqueSongs = allSongs.filter((song, index, self) =>
+    index === self.findIndex(s => s.id === song.id)
+  );
+
+  return uniqueSongs;
 }
 
 // Available songs (dynamically computed)

@@ -8,6 +8,7 @@ export interface Tile {
   spawnedAt: number;
   state: 'falling' | 'hit' | 'missed';
   noteFrequency?: number; // Optional frequency for melodic playback
+  timestamp?: number; // Optional beatmap time in ms (for multi-note clustering)
 }
 
 export interface GameState {

@@ -10,7 +10,7 @@ export interface GameLoopConfig {
   latencyCompensationMs?: number; // Milliseconds to compensate for hand tracking delay
   onScoreUpdate?: (stats: any) => void;
   onGameOver?: (stats: any) => void;
-  onHit?: (lane: number, quality: string, noteFrequency?: number) => void;
+  onHit?: (lane: number, quality: string, noteFrequency?: number | number[], timestamp?: number) => void;
   onComboChange?: (combo: number, quality: string) => void; // Called when combo changes
 }
 
@@ -77,7 +77,7 @@ export class GameLoop {
         this.beatmap.notes[this.beatmapIndex].time <= gameTime
       ) {
         const note = this.beatmap.notes[this.beatmapIndex];
-        this.tileEngine.spawnTile(note.lane, note.noteFrequency);
+        this.tileEngine.spawnTile(note.lane, note.noteFrequency, note.time);
         this.beatmapIndex++;
       }
     }
@@ -166,9 +166,9 @@ export class GameLoop {
       const stats = this.scoringEngine.getStats();
       console.log('[GameLoop] Score after hit:', stats.score);
 
-      // Notify about successful hit
+      // Notify about successful hit with single note (background track handles the rest)
       if (this.config.onHit) {
-        this.config.onHit(tap.lane, hitResult.quality, tile.noteFrequency);
+        this.config.onHit(tap.lane, hitResult.quality, tile.noteFrequency, tile.timestamp);
       }
 
       // Notify about combo change
