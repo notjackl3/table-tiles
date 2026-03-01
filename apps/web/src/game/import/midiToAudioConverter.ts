@@ -198,16 +198,29 @@ export async function uploadAudioFile(
   try {
     // Use relative URL in development to leverage Vite proxy
     const apiUrl = import.meta.env.VITE_API_URL || '';
+    console.log('[MIDI Converter] Uploading audio to:', `${apiUrl}/api/upload-audio`);
+    console.log('[MIDI Converter] File size:', audioFile.size, 'bytes');
+
     const response = await fetch(`${apiUrl}/api/upload-audio`, {
       method: 'POST',
       body: formData
     });
 
     if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+      // Try to get error details from response
+      let errorMessage = `Upload failed (${response.status}): ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        // Response is not JSON, just use status code and text
+        console.warn('[MIDI Converter] Error response is not JSON');
+      }
+      throw new Error(errorMessage);
     }
 
     const result = await response.json();
+    console.log('[MIDI Converter] Upload successful:', result);
     return result.path; // e.g., "/sounds/song-name.wav"
 
   } catch (error) {

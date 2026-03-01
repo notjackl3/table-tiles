@@ -33,8 +33,13 @@ export class BackgroundTrackPlayer {
    * Load audio file and start playing
    */
   async start(beatmap: Beatmap) {
-    // Stop any existing playback
+    console.log('[BackgroundTrack] Start requested');
+
+    // CRITICAL: Stop any existing playback FIRST and wait a bit for cleanup
     this.stop();
+
+    // Give the audio context a moment to fully release the previous source
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Check if beatmap has an audio file
     if (!beatmap.audioFile) {
@@ -58,6 +63,12 @@ export class BackgroundTrackPlayer {
       console.log(`[BackgroundTrack] Audio loaded successfully (${this.audioBuffer.duration.toFixed(2)}s)`);
       console.log(`[BackgroundTrack] Starting playback at ${this.BACKGROUND_VOLUME * 100}% volume`);
 
+      // Double-check nothing is playing before creating new nodes
+      if (this.sourceNode || this.gainNode) {
+        console.warn('[BackgroundTrack] Nodes still exist after stop! Force cleaning...');
+        this.stop();
+      }
+
       // Create audio source
       this.sourceNode = this.audioContext.createBufferSource();
       this.sourceNode.buffer = this.audioBuffer;
@@ -74,10 +85,12 @@ export class BackgroundTrackPlayer {
       this.sourceNode.start(0);
       this.isPlaying = true;
 
+      console.log('[BackgroundTrack] Playback started successfully');
+
       // Handle playback end
       this.sourceNode.onended = () => {
         if (this.isPlaying) {
-          console.log('[BackgroundTrack] Playback ended');
+          console.log('[BackgroundTrack] Playback ended naturally');
           this.isPlaying = false;
         }
       };
@@ -85,6 +98,7 @@ export class BackgroundTrackPlayer {
     } catch (error) {
       console.error('[BackgroundTrack] Failed to load/play audio file:', error);
       console.log('[BackgroundTrack] Make sure the audio file exists at:', beatmap.audioFile);
+      this.stop(); // Clean up on error
     }
   }
 
@@ -92,23 +106,47 @@ export class BackgroundTrackPlayer {
    * Stop playback
    */
   stop() {
+    console.log('[BackgroundTrack] Stopping playback...', {
+      hasSource: !!this.sourceNode,
+      hasGain: !!this.gainNode,
+      isPlaying: this.isPlaying
+    });
+
+    // Always set isPlaying to false first to prevent any race conditions
+    this.isPlaying = false;
+
+    // Stop and disconnect source node
     if (this.sourceNode) {
       try {
-        this.sourceNode.stop();
+        this.sourceNode.stop(0);
+        console.log('[BackgroundTrack] Source node stopped');
       } catch (e) {
-        // Source might already be stopped
+        console.log('[BackgroundTrack] Source already stopped or invalid state:', e);
       }
-      this.sourceNode.disconnect();
+
+      try {
+        this.sourceNode.disconnect();
+        console.log('[BackgroundTrack] Source node disconnected');
+      } catch (e) {
+        console.log('[BackgroundTrack] Error disconnecting source:', e);
+      }
+
       this.sourceNode = null;
     }
 
+    // Disconnect gain node
     if (this.gainNode) {
-      this.gainNode.disconnect();
+      try {
+        this.gainNode.disconnect();
+        console.log('[BackgroundTrack] Gain node disconnected');
+      } catch (e) {
+        console.log('[BackgroundTrack] Error disconnecting gain:', e);
+      }
+
       this.gainNode = null;
     }
 
-    this.isPlaying = false;
-    console.log('[BackgroundTrack] Stopped');
+    console.log('[BackgroundTrack] Stopped successfully');
   }
 
   /**

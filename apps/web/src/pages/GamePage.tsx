@@ -11,6 +11,7 @@ import { SongSelection } from '../game/SongSelection';
 import { loadSong } from '../game/songs/songLoader';
 import { saveHighScore, getHighScore } from '../game/highScores';
 import { Button } from '../components/Button';
+import type { Beatmap } from '../game/engine/beatmap';
 
 export function GamePage() {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export function GamePage() {
   const [recentTaps, setRecentTaps] = useState<TapEvent[]>([]);
   const [selectedSongId, setSelectedSongId] = useState<string | null>('simple-melody');
   const [hypeLevel, setHypeLevel] = useState<'low' | 'medium' | 'high'>('medium');
+  const [currentBeatmap, setCurrentBeatmap] = useState<Beatmap | null>(null);
 
   // Settings toggles
   const [voiceEffectsEnabled, setVoiceEffectsEnabled] = useState(true);
@@ -294,7 +296,6 @@ export function GamePage() {
 
     // Stop audio engine and background track
     audioEngine.stopBackgroundTrack();
-    audioEngine.stopAllSounds();
 
     // Reload page to reset camera and show game selection
     window.location.reload();
@@ -376,7 +377,10 @@ export function GamePage() {
 
         // Play melodic sound LOUD (player's hit emphasis)
         // Background track plays continuously at low volume, player hits play on top
-        audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
+        // Skip note synthesis if in MP3-only mode (silentNotes flag)
+        if (!currentBeatmap?.silentNotes) {
+          audioEngine.playHitSound(lane, quality as HitQuality, noteFrequency);
+        }
 
         // Play impact sound for successful hits (boom, bam) - only if voice effects enabled
         if (voiceEffectsEnabled) {
@@ -441,6 +445,7 @@ export function GamePage() {
 
     // Load beatmap from selected song
     const beatmap = loadSong(selectedSongId);
+    setCurrentBeatmap(beatmap);
 
     // Start background track (plays all notes quietly)
     audioEngine.startBackgroundTrack(beatmap);

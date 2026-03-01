@@ -117,13 +117,47 @@ function groupSimultaneousNotes(notes: ParsedNote[], timeWindow: number): Parsed
 }
 
 /**
+ * Post-process to enforce maximum consecutive repetitions
+ * If a note repeats more than maxConsecutive times, skip the extras
+ * This is a final safety net to prevent excessive repetition
+ */
+function enforceMaxRepetition(notes: ParsedNote[], maxConsecutive: number): ParsedNote[] {
+  if (notes.length === 0) return [];
+
+  const result: ParsedNote[] = [notes[0]];
+  let consecutiveCount = 1;
+
+  for (let i = 1; i < notes.length; i++) {
+    const note = notes[i];
+    const lastNote = result[result.length - 1];
+
+    if (note.note === lastNote.note) {
+      consecutiveCount++;
+
+      // Only include if we haven't exceeded the max
+      if (consecutiveCount <= maxConsecutive) {
+        result.push(note);
+      }
+      // Otherwise skip this note to prevent excessive repetition
+    } else {
+      // Different note - reset counter and include
+      consecutiveCount = 1;
+      result.push(note);
+    }
+  }
+
+  console.log(`[Melody Extractor] Enforced max repetition: ${notes.length} -> ${result.length} notes`);
+  return result;
+}
+
+/**
  * Extract highest notes with variety enforcement
  * Prevents selecting the same note too many times in a row
  */
 function extractHighestNoteWithVariety(noteGroups: ParsedNote[][]): ParsedNote[] {
   const selected: ParsedNote[] = [];
-  const MAX_CONSECUTIVE = 2; // Reduced from 3 to 2 for better variety
-  const MAX_SINGLE_NOTE_REPETITION = 3; // Skip single notes after this many repeats
+  const MAX_CONSECUTIVE = 2; // Maximum times to allow same note in a row (with alternatives)
+  const MAX_SINGLE_NOTE_REPETITION = 2; // Skip single notes after this many repeats (reduced from 3)
 
   for (const group of noteGroups) {
     if (group.length === 1) {
@@ -151,22 +185,22 @@ function extractHighestNoteWithVariety(noteGroups: ParsedNote[][]): ParsedNote[]
     const highestNote = sortedByPitch[0];
     const consecutiveCount = countConsecutiveSameNote(selected, highestNote.note);
 
-    // If we have alternatives and the highest note would repeat, choose differently
-    if (consecutiveCount >= 1 && sortedByPitch.length > 1) {
+    // AGGRESSIVE VARIETY: If we have alternatives, strongly prefer variety
+    if (sortedByPitch.length > 1) {
       // Find the first note that's different from the last selected note
       const lastNote = selected.length > 0 ? selected[selected.length - 1].note : '';
       const alternativeNote = sortedByPitch.find(note => note.note !== lastNote);
 
-      if (alternativeNote && consecutiveCount >= MAX_CONSECUTIVE) {
-        // Definitely too repetitive - use alternative
-        selected.push(alternativeNote);
-      } else if (alternativeNote && consecutiveCount >= 1) {
-        // Starting to repeat - prefer alternative if it's not too much lower
+      // If there's ANY repetition and we have an alternative, prefer the alternative
+      if (alternativeNote && consecutiveCount >= 1) {
         const highestFreq = noteToFrequency(highestNote.note);
         const altFreq = noteToFrequency(alternativeNote.note);
 
         // Use alternative if it's within reasonable range (not more than an octave lower)
-        if (highestFreq - altFreq < 600) {
+        if (highestFreq - altFreq < 700) { // Increased tolerance from 600 to 700
+          selected.push(alternativeNote);
+        } else if (consecutiveCount >= MAX_CONSECUTIVE) {
+          // Force alternative even if it's lower, to avoid too much repetition
           selected.push(alternativeNote);
         } else {
           selected.push(highestNote);
@@ -179,7 +213,8 @@ function extractHighestNoteWithVariety(noteGroups: ParsedNote[][]): ParsedNote[]
     }
   }
 
-  return selected;
+  // POST-PROCESS: Fix any remaining 4+ consecutive repeats
+  return enforceMaxRepetition(selected, 3);
 }
 
 /**
@@ -189,8 +224,8 @@ function extractHighestNoteWithVariety(noteGroups: ParsedNote[][]): ParsedNote[]
 function extractMelodyLine(noteGroups: ParsedNote[][]): ParsedNote[] {
   const melody: ParsedNote[] = [];
   let previousNote: ParsedNote | null = null;
-  const MAX_CONSECUTIVE_SAME_NOTE = 2; // Reduced from 3 to 2 for better variety
-  const MAX_SINGLE_NOTE_REPETITION = 3; // Skip single notes after this many repeats
+  const MAX_CONSECUTIVE_SAME_NOTE = 2; // Maximum for multi-note groups
+  const MAX_SINGLE_NOTE_REPETITION = 2; // Skip single notes after this many repeats (reduced from 3)
 
   for (const group of noteGroups) {
     if (group.length === 1) {
@@ -241,24 +276,24 @@ function extractMelodyLine(noteGroups: ParsedNote[][]): ParsedNote[] {
       const frequency = noteToFrequency(note.note);
       score += (frequency / 1000) * 0.1;
 
-      // Factor 5: VARIETY ENFORCEMENT - Aggressively penalize repetitive notes when alternatives exist
+      // Factor 5: VARIETY ENFORCEMENT - SUPER AGGRESSIVELY penalize repetitive notes
       const noteConsecutiveCount = countConsecutiveSameNote(melody, note.note);
 
       if (hasAlternatives) {
-        // We have other note options - strongly discourage repetition
+        // We have other note options - EXTREMELY heavily discourage ANY repetition
         if (noteConsecutiveCount >= MAX_CONSECUTIVE_SAME_NOTE) {
-          // Very heavy penalty - essentially eliminate this option
-          score -= 1000;
+          // Massive penalty - completely eliminate this option
+          score -= 2000;
         } else if (noteConsecutiveCount >= 1) {
-          // Even a single repeat gets penalized when we have choices
-          score -= 50;
+          // Even a single repeat gets HEAVILY penalized when we have choices
+          score -= 100; // Increased from 50 to 100
         }
       } else {
-        // All notes in group are the same - apply lighter penalty
+        // All notes in group are the same - apply moderate penalty
         if (noteConsecutiveCount >= MAX_CONSECUTIVE_SAME_NOTE) {
-          score -= 100;
+          score -= 150; // Increased from 100
         } else if (noteConsecutiveCount >= 1) {
-          score -= 20;
+          score -= 30; // Increased from 20
         }
       }
 
@@ -274,7 +309,8 @@ function extractMelodyLine(noteGroups: ParsedNote[][]): ParsedNote[] {
     previousNote = selectedNote;
   }
 
-  return melody;
+  // POST-PROCESS: Fix any remaining 4+ consecutive repeats
+  return enforceMaxRepetition(melody, 3);
 }
 
 /**

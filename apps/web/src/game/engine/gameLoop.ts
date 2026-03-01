@@ -85,8 +85,8 @@ export class GameLoop {
     // Update tiles
     const { missedTiles } = this.tileEngine.update(deltaTime);
 
-    // Handle missed tiles (track for accuracy but don't end game)
-    for (const tile of missedTiles) {
+    // Handle missed tiles - game over on first miss (no lives)
+    if (missedTiles.length > 0) {
       this.scoringEngine.registerMiss();
 
       // Notify about combo reset when tile is missed
@@ -94,6 +94,10 @@ export class GameLoop {
         const stats = this.scoringEngine.getStats();
         this.config.onComboChange(stats.combo, 'miss');
       }
+
+      // End game immediately on missed note
+      this.gameOver();
+      return;
     }
 
     // Notify score update

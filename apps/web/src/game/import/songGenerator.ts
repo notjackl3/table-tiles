@@ -7,6 +7,7 @@ import type { Beatmap } from '../engine/beatmap';
 import { parseMidiFile, getMidiStats, normalizeVelocity } from './midiParser';
 import { extractMelody, analyzeMelodyQuality, type ExtractionStrategy } from './melodyExtractor';
 import { transcribeSheetMusic, type OMRConfig, getDefaultOMRConfig } from './omrService';
+import { generateRandomNotes } from '../engine/beatmap';
 
 export interface SongImportOptions {
   /** Song metadata */
@@ -224,6 +225,100 @@ export async function importFromSheetMusic(
       laneDistribution: quality.laneDistribution,
       suggestedDifficulty: quality.difficulty,
       noteVariety: quality.noteVariety
+    },
+    warnings
+  };
+}
+
+/**
+ * Import from MP3 file only - generates random notes synced to beat
+ * @param mp3File - MP3 audio file
+ * @param options - Import options
+ * @returns Generated beatmap with random notes
+ */
+export async function importFromMP3Only(
+  mp3File: File,
+  options: SongImportOptions
+): Promise<ImportResult> {
+  console.log('[Song Import] Processing MP3-only file:', mp3File.name);
+
+  // Validate file
+  if (!mp3File.name.toLowerCase().endsWith('.mp3') && !mp3File.name.toLowerCase().endsWith('.wav')) {
+    throw new Error('Invalid file type. Expected .mp3 or .wav file');
+  }
+
+  const warnings: string[] = [];
+
+  // Get audio duration using Web Audio API
+  const arrayBuffer = await mp3File.arrayBuffer();
+  const audioContext = new AudioContext();
+  let audioBuffer: AudioBuffer;
+
+  try {
+    audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+  } catch (error) {
+    throw new Error('Failed to decode audio file. Please ensure it is a valid MP3 or WAV file.');
+  } finally {
+    await audioContext.close();
+  }
+
+  const duration = audioBuffer.duration * 1000; // Convert to ms
+  console.log('[Song Import] Audio duration:', duration, 'ms');
+
+  // Use manual BPM or default to 120
+  const bpm = options.manualBPM || 120;
+  if (!options.manualBPM) {
+    warnings.push(`Using default BPM: ${bpm}. Set manual BPM for better note timing.`);
+  }
+
+  // Generate random notes based on difficulty or default to medium
+  const difficulty = options.difficulty || 'medium';
+  const randomNotes = generateRandomNotes(duration, bpm, difficulty);
+
+  console.log('[Song Import] Generated', randomNotes.length, 'random notes');
+
+  // Generate beatmap ID
+  const beatmapId = generateSongId(options.name);
+
+  // Upload MP3 file
+  let audioPath: string;
+  try {
+    const { uploadAudioFile } = await import('./midiToAudioConverter');
+    audioPath = await uploadAudioFile(mp3File, beatmapId);
+    console.log('[Song Import] Audio uploaded to:', audioPath);
+  } catch (error) {
+    console.error('[Song Import] Audio upload failed:', error);
+    throw new Error('Failed to upload MP3 file');
+  }
+
+  // Create beatmap with silentNotes flag
+  const beatmap: Beatmap = {
+    id: beatmapId,
+    name: options.name,
+    artist: options.artist,
+    bpm,
+    duration,
+    notes: randomNotes,
+    audioFile: audioPath,
+    silentNotes: true // Don't synthesize note sounds in MP3-only mode
+  };
+
+  warnings.push('MP3-only mode: Random notes generated. Notes will not play sounds on hit.');
+
+  return {
+    beatmap,
+    stats: {
+      originalNoteCount: randomNotes.length,
+      finalNoteCount: randomNotes.length,
+      retentionRate: 100,
+      averageSpacing: duration / randomNotes.length,
+      isPolyphonic: false,
+      laneDistribution: [0, 0, 0, 0], // Not applicable for random notes
+      suggestedDifficulty: difficulty,
+      noteVariety: {
+        uniqueNotes: 4,
+        longestRepetition: 1
+      }
     },
     warnings
   };

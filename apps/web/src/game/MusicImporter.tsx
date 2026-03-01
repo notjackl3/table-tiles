@@ -7,6 +7,7 @@ import { useState, useRef } from 'react';
 import {
   importFromMIDI,
   importFromSheetMusic,
+  importFromMP3Only,
   saveBeatmapToAPI,
   saveBeatmapToLocalStorage,
   type SongImportOptions,
@@ -28,9 +29,10 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [omrAvailable, setOmrAvailable] = useState<boolean | null>(null);
+  const [midiFile, setMidiFile] = useState<File | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const midiFileInputRef = useRef<HTMLInputElement>(null);
   const audioFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
@@ -46,13 +48,23 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
     setOmrAvailable(available);
   };
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMidiFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (file) {
+      setMidiFile(file);
+    }
+  };
 
+  const handleImport = async () => {
     // Validate inputs
     if (!songName.trim()) {
       setError('Please enter a song name');
+      return;
+    }
+
+    // Check that at least one file is provided
+    if (!midiFile && !audioFile && importType !== 'image') {
+      setError('Please upload at least a MIDI file or an MP3 file');
       return;
     }
 
@@ -72,26 +84,38 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
       let result: ImportResult;
 
       if (importType === 'midi') {
-        result = await importFromMIDI(file, options);
+        if (midiFile) {
+          // MIDI file provided - generate notes from MIDI
+          result = await importFromMIDI(midiFile, options);
 
-        // Upload user-provided audio file if one is selected
-        if (audioFile) {
-          try {
-            console.log('[Music Importer] Uploading background audio...');
-            const audioPath = await uploadAudioFile(audioFile, result.beatmap.id);
-            console.log('[Music Importer] Audio uploaded to:', audioPath);
+          // Upload user-provided audio file if one is selected
+          if (audioFile) {
+            try {
+              console.log('[Music Importer] Uploading background audio...');
+              const audioPath = await uploadAudioFile(audioFile, result.beatmap.id);
+              console.log('[Music Importer] Audio uploaded to:', audioPath);
 
-            // Update beatmap with audio file path
-            result.beatmap.audioFile = audioPath;
+              // Update beatmap with audio file path
+              result.beatmap.audioFile = audioPath;
 
-          } catch (audioError) {
-            console.warn('[Music Importer] Audio upload failed:', audioError);
-            result.warnings.push('Background audio upload failed. Song will use synthesized audio.');
+            } catch (audioError) {
+              console.warn('[Music Importer] Audio upload failed:', audioError);
+              result.warnings.push('Background audio upload failed. Song will use synthesized audio.');
+            }
           }
+        } else if (audioFile) {
+          // MP3 only - generate random notes
+          result = await importFromMP3Only(audioFile, options);
+        } else {
+          throw new Error('No files provided');
         }
       } else {
+        // Sheet music import (not affected by this change)
         const omrConfig = getDefaultOMRConfig();
-        result = await importFromSheetMusic(file, options, omrConfig);
+        if (!midiFile) {
+          throw new Error('Please select an image file');
+        }
+        result = await importFromSheetMusic(midiFile, options, omrConfig);
       }
 
       setImportResult(result);
@@ -113,15 +137,21 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
       }
 
       console.log('[Music Importer] Import successful:', result);
+
+      // Reset file inputs
+      setMidiFile(null);
+      setAudioFile(null);
+      if (midiFileInputRef.current) {
+        midiFileInputRef.current.value = '';
+      }
+      if (audioFileInputRef.current) {
+        audioFileInputRef.current.value = '';
+      }
     } catch (err: any) {
       console.error('[Music Importer] Import failed:', err);
       setError(err.message || 'Failed to import music');
     } finally {
       setIsProcessing(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
@@ -316,14 +346,77 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
             </select>
           </div>
 
-          {/* Background Audio File (Optional) */}
+          {/* MIDI File Upload (Optional) */}
           {importType === 'midi' && (
             <div style={{ marginBottom: '12px' }}>
               <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                Background Audio (Optional)
+                MIDI File (Optional)
               </label>
               <div style={{ fontSize: '0.75rem', color: '#8b7355', marginBottom: '8px' }}>
-                Upload a WAV or MP3 file to play as background music. If not provided, notes will be synthesized.
+                Upload a MIDI file to generate notes. If not provided, random notes will be generated.
+              </div>
+              <input
+                ref={midiFileInputRef}
+                type="file"
+                accept=".mid,.midi"
+                onChange={handleMidiFileSelect}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '2px solid #d4c7b0',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                  boxSizing: 'border-box',
+                  background: 'white'
+                }}
+              />
+              {midiFile && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  background: '#e6f7e9',
+                  border: '2px solid #6fa87a',
+                  borderRadius: '4px',
+                  fontSize: '0.8rem',
+                  color: '#5a4d3a',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span>✓ {midiFile.name}</span>
+                  <Button
+                    onClick={() => {
+                      setMidiFile(null);
+                      if (midiFileInputRef.current) {
+                        midiFileInputRef.current.value = '';
+                      }
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      background: '#c75450',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MP3 File Upload (Optional) */}
+          {importType === 'midi' && (
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                MP3 File (Optional)
+              </label>
+              <div style={{ fontSize: '0.75rem', color: '#8b7355', marginBottom: '8px' }}>
+                Upload an MP3 file to play as background music. If not provided, notes will be synthesized.
               </div>
               <input
                 ref={audioFileInputRef}
@@ -379,19 +472,10 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
             </div>
           )}
 
-          {/* File Input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={importType === 'midi' ? '.mid,.midi' : 'image/*,.pdf'}
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-
           {/* Import Button */}
           <Button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing || !songName.trim() || (importType === 'image' && omrAvailable === false)}
+            onClick={handleImport}
+            disabled={isProcessing || !songName.trim() || (importType === 'midi' && !midiFile && !audioFile) || (importType === 'image' && omrAvailable === false)}
             disableClickSound={true}
             style={{
               width: '100%',
@@ -403,13 +487,13 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
               cursor: isProcessing ? 'wait' : 'pointer',
               fontSize: '1rem',
               fontWeight: 'bold',
-              opacity: !songName.trim() ? 0.5 : 1,
+              opacity: !songName.trim() || (importType === 'midi' && !midiFile && !audioFile) ? 0.5 : 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}
           >
-            {isProcessing ? 'Processing...' : `Select ${importType === 'midi' ? 'MIDI' : 'Image'} File`}
+            {isProcessing ? 'Processing...' : 'Import Song'}
           </Button>
 
           {/* Error Display */}

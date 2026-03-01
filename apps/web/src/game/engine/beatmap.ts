@@ -18,6 +18,7 @@ export interface Beatmap {
   duration: number; // ms
   notes: BeatmapNote[];
   audioFile?: string; // Optional path to pre-rendered audio file (MP3/WAV) for background music
+  silentNotes?: boolean; // If true, don't synthesize notes (MP3-only mode with random notes)
 }
 
 /**
@@ -158,4 +159,41 @@ export function validateBeatmapSpacing(beatmap: Beatmap): {
 export function getRecommendedSpacing(bpm: number): number {
   const beatInterval = (60 / bpm) * 1000; // ms per beat
   return Math.max(beatInterval, MIN_NOTE_SPACING_MS);
+}
+
+/**
+ * Generate random notes for MP3-only mode
+ * Creates notes with random spacing between 500-1000ms for a faster pace
+ */
+export function generateRandomNotes(
+  duration: number,
+  _bpm: number,
+  _difficulty: 'easy' | 'medium' | 'hard' = 'medium'
+): BeatmapNote[] {
+  const notes: BeatmapNote[] = [];
+  let currentTime = 3000; // Start after 3 seconds
+
+  while (currentTime < duration) {
+    // Choose random lane (with slight anti-repeat bias)
+    let lane = Math.floor(Math.random() * 4);
+
+    // Avoid putting 3+ notes in same lane consecutively
+    if (notes.length >= 2) {
+      const lastTwo = notes.slice(-2);
+      if (lastTwo[0].lane === lastTwo[1].lane && lastTwo[1].lane === lane) {
+        lane = (lane + 1 + Math.floor(Math.random() * 3)) % 4;
+      }
+    }
+
+    notes.push({
+      lane,
+      time: currentTime
+    });
+
+    // Random spacing between 500-1000ms for faster pace
+    const randomSpacing = 500 + Math.random() * 500; // 500 to 1000ms
+    currentTime += randomSpacing;
+  }
+
+  return notes;
 }
