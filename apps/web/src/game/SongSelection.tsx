@@ -4,6 +4,7 @@ import type { AudioEngine } from './audio/audioEngine';
 import { MusicImporter } from './MusicImporter';
 import { deleteSongFromAPI, deleteImportedSong } from './import/songGenerator';
 import { getHighScore } from './highScores';
+import { Button } from '../components/Button';
 
 interface SongSelectionProps {
   selectedSongId: string | null;
@@ -284,7 +285,7 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
 
       {/* Preview and Select buttons */}
       <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-        <button
+        <Button
           onClick={onSelect}
           disabled={isSelected}
           style={{
@@ -315,10 +316,11 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
           }}
         >
           {isSelected ? 'Selected' : 'Select'}
-        </button>
+        </Button>
 
-        <button
+        <Button
           onClick={isPreviewing ? onStopPreview : onPreview}
+          disableClickSound={true}
           style={{
             flex: 1,
             padding: '8px',
@@ -342,12 +344,12 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
           }}
         >
           {isPreviewing ? 'Stop' : 'Preview'}
-        </button>
+        </Button>
       </div>
 
       {/* Delete button for imported songs */}
       {canDelete && (
-        <button
+        <Button
           onClick={onDelete}
           style={{
             width: '100%',
@@ -373,7 +375,7 @@ function SongCard({ song, isSelected, isPreviewing, onSelect, onPreview, onStopP
           }}
         >
           Delete
-        </button>
+        </Button>
       )}
     </div>
   );

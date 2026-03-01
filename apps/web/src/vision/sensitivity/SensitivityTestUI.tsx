@@ -3,6 +3,7 @@ import { type FingerBendState } from '../fingerBend/fingerBendDetector';
 import { HAND_LANDMARKS } from '../handTracker';
 import type { HandLandmarks } from '../../types/shared';
 import type { VisionLoop } from '../visionLoop';
+import { Button } from '../../components/Button';
 
 interface SensitivityTestUIProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -494,21 +495,21 @@ export function SensitivityTestUI({ videoRef, onComplete, onCancel, visionLoop }
         </div>
 
         <div style={{ marginTop: '25px', display: 'flex', gap: '15px', justifyContent: 'center' }}>
-          <button
+          <Button
             onClick={handleSave}
             className="button button-primary"
             style={{ fontSize: '1.1rem', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             Save & Continue
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={onCancel}
             className="button"
             style={{ fontSize: '1.1rem', padding: '14px 32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>

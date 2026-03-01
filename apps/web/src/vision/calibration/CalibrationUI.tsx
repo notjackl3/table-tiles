@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import type { Point2D, TableCalibration } from '../../types/shared';
 import { computeHomography, validateCorners, applyHomography } from './homography';
 import { saveCalibration } from './storage';
+import { Button } from '../../components/Button';
 
 interface CalibrationUIProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -257,7 +258,7 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
         )}
 
         <div style={{ marginTop: '20px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-          <button
+          <Button
             onClick={handleReset}
             style={{
               padding: '10px 20px',
@@ -272,10 +273,10 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
             }}
           >
             Reset
-          </button>
+          </Button>
 
           {corners.length === 4 && !testMode && (
-            <button
+            <Button
               onClick={handleCompute}
               style={{
                 padding: '10px 20px',
@@ -290,11 +291,11 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
               }}
             >
               Compute Calibration
-            </button>
+            </Button>
           )}
 
           {testMode && (
-            <button
+            <Button
               onClick={handleSave}
               style={{
                 padding: '10px 20px',
@@ -309,10 +310,10 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
               }}
             >
               Save & Continue
-            </button>
+            </Button>
           )}
 
-          <button
+          <Button
             onClick={onCancel}
             style={{
                 padding: '10px 20px',
@@ -327,7 +328,7 @@ export function CalibrationUI({ videoRef, onComplete, onCancel, stream }: Calibr
             }}
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -177,16 +177,23 @@ async function audioBufferToWav(audioBuffer: AudioBuffer): Promise<Blob> {
 
 /**
  * Upload audio file to server
- * @param audioBlob - Audio file as Blob
+ * @param audioFile - Audio file as Blob or File
  * @param filename - Filename (without extension)
  * @returns URL path to uploaded file
  */
 export async function uploadAudioFile(
-  audioBlob: Blob,
+  audioFile: Blob | File,
   filename: string
 ): Promise<string> {
   const formData = new FormData();
-  formData.append('audio', audioBlob, `${filename}.wav`);
+
+  // If it's a File object with a name, use the original filename
+  // Otherwise, use the provided filename
+  const uploadFilename = audioFile instanceof File && audioFile.name
+    ? audioFile.name
+    : `${filename}.wav`;
+
+  formData.append('audio', audioFile, uploadFilename);
 
   try {
     // Use relative URL in development to leverage Vite proxy

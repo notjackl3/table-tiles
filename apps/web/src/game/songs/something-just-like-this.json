@@ -3,191 +3,556 @@
   "name": "Something Just Like This",
   "artist": "The Chainsmokers & Coldplay",
   "bpm": 104,
-  "duration": 18500,
+  "duration": 60000,
   "notes": [
     {
-      "lane": 2,
+      "lane": 1,
       "time": 0,
       "note": "D4"
     },
     {
-      "lane": 1,
+      "lane": 2,
       "time": 500,
       "note": "D4"
     },
     {
-      "lane": 2,
+      "lane": 0,
       "time": 1000,
       "note": "D4"
     },
     {
-      "lane": 1,
+      "lane": 3,
       "time": 1500,
       "note": "D4"
     },
     {
-      "lane": 2,
-      "time": 2000,
+      "lane": 1,
+      "time": 1900,
       "note": "D4"
     },
     {
-      "lane": 1,
-      "time": 2500,
+      "lane": 2,
+      "time": 2400,
       "note": "G3"
     },
     {
+      "lane": 3,
+      "time": 3200,
+      "note": "D4"
+    },
+    {
+      "lane": 0,
+      "time": 3800,
+      "note": "D4"
+    },
+    {
       "lane": 2,
-      "time": 3000,
+      "time": 4400,
       "note": "D4"
     },
     {
       "lane": 1,
-      "time": 3500,
-      "note": "D4"
-    },
-    {
-      "lane": 2,
-      "time": 4000,
-      "note": "D4"
-    },
-    {
-      "lane": 1,
-      "time": 4500,
+      "time": 5000,
       "note": "E4"
     },
     {
-      "lane": 2,
-      "time": 5000,
+      "lane": 3,
+      "time": 5600,
       "note": "C#4"
     },
     {
-      "lane": 1,
-      "time": 5500,
+      "lane": 0,
+      "time": 6200,
       "note": "D4"
     },
     {
       "lane": 2,
-      "time": 6000,
+      "time": 6900,
       "note": "A3"
     },
     {
       "lane": 1,
-      "time": 6500,
+      "time": 7400,
       "note": "D4"
     },
     {
-      "lane": 2,
-      "time": 7000,
-      "note": "D4"
-    },
-    {
-      "lane": 1,
-      "time": 7500,
-      "note": "D4"
-    },
-    {
-      "lane": 2,
+      "lane": 3,
       "time": 8000,
       "note": "D4"
     },
     {
-      "lane": 1,
+      "lane": 0,
       "time": 8500,
-      "note": "G3"
+      "note": "D4"
     },
     {
       "lane": 2,
       "time": 9000,
-      "note": "D3"
+      "note": "D4"
     },
     {
       "lane": 1,
       "time": 9500,
+      "note": "G3"
+    },
+    {
+      "lane": 3,
+      "time": 10600,
+      "note": "D3"
+    },
+    {
+      "lane": 0,
+      "time": 11100,
       "note": "D4"
     },
     {
       "lane": 2,
-      "time": 10000,
+      "time": 11600,
       "note": "D4"
     },
     {
       "lane": 1,
-      "time": 10500,
-      "note": "D4"
-    },
-    {
-      "lane": 2,
-      "time": 11000,
-      "note": "F#4"
-    },
-    {
-      "lane": 3,
-      "time": 11500,
-      "note": "D4"
-    },
-    {
-      "lane": 2,
-      "time": 12000,
+      "time": 12100,
       "note": "D4"
     },
     {
       "lane": 3,
-      "time": 12500,
+      "time": 12900,
       "note": "F#4"
     },
     {
       "lane": 2,
-      "time": 13000,
-      "note": "F#4"
+      "time": 13400,
+      "note": "D4"
+    },
+    {
+      "lane": 0,
+      "time": 13900,
+      "note": "D4"
     },
     {
       "lane": 3,
-      "time": 13500,
+      "time": 14400,
+      "note": "F#4"
+    },
+    {
+      "lane": 1,
+      "time": 14900,
       "note": "F#4"
     },
     {
       "lane": 2,
-      "time": 14000,
+      "time": 15400,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 15900,
       "note": "F#4"
     },
     {
       "lane": 3,
-      "time": 14500,
+      "time": 16800,
+      "note": "G4"
+    },
+    {
+      "lane": 1,
+      "time": 17300,
+      "note": "A3"
+    },
+    {
+      "lane": 2,
+      "time": 17800,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 18300,
+      "note": "E4"
+    },
+    {
+      "lane": 3,
+      "time": 18800,
+      "note": "E4"
+    },
+    {
+      "lane": 1,
+      "time": 19300,
+      "note": "F#4"
+    },
+    {
+      "lane": 2,
+      "time": 19800,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 20300,
+      "note": "D4"
+    },
+    {
+      "lane": 3,
+      "time": 20800,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 21300,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 21800,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 22300,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 22800,
+      "note": "E4"
+    },
+    {
+      "lane": 1,
+      "time": 23300,
+      "note": "E4"
+    },
+    {
+      "lane": 2,
+      "time": 23800,
+      "note": "E4"
+    },
+    {
+      "lane": 0,
+      "time": 24300,
+      "note": "E4"
+    },
+    {
+      "lane": 3,
+      "time": 24800,
+      "note": "E4"
+    },
+    {
+      "lane": 1,
+      "time": 25300,
+      "note": "E4"
+    },
+    {
+      "lane": 2,
+      "time": 25800,
+      "note": "D4"
+    },
+    {
+      "lane": 0,
+      "time": 26600,
+      "note": "D4"
+    },
+    {
+      "lane": 3,
+      "time": 27100,
+      "note": "D4"
+    },
+    {
+      "lane": 1,
+      "time": 27600,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 28100,
+      "note": "D4"
+    },
+    {
+      "lane": 0,
+      "time": 28600,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 29100,
+      "note": "A4"
+    },
+    {
+      "lane": 1,
+      "time": 29600,
+      "note": "A4"
+    },
+    {
+      "lane": 2,
+      "time": 30100,
+      "note": "A4"
+    },
+    {
+      "lane": 0,
+      "time": 31100,
+      "note": "B4"
+    },
+    {
+      "lane": 3,
+      "time": 31600,
+      "note": "B4"
+    },
+    {
+      "lane": 1,
+      "time": 32100,
+      "note": "B4"
+    },
+    {
+      "lane": 2,
+      "time": 32600,
+      "note": "A4"
+    },
+    {
+      "lane": 0,
+      "time": 33100,
+      "note": "A4"
+    },
+    {
+      "lane": 3,
+      "time": 33600,
+      "note": "G4"
+    },
+    {
+      "lane": 1,
+      "time": 34600,
+      "note": "F#4"
+    },
+    {
+      "lane": 2,
+      "time": 35100,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 35600,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 36100,
+      "note": "F#4"
+    },
+    {
+      "lane": 1,
+      "time": 36600,
+      "note": "F#4"
+    },
+    {
+      "lane": 2,
+      "time": 37100,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 37600,
+      "note": "A4"
+    },
+    {
+      "lane": 3,
+      "time": 38100,
+      "note": "A4"
+    },
+    {
+      "lane": 1,
+      "time": 38600,
+      "note": "E4"
+    },
+    {
+      "lane": 2,
+      "time": 39100,
+      "note": "E4"
+    },
+    {
+      "lane": 0,
+      "time": 39600,
+      "note": "E4"
+    },
+    {
+      "lane": 3,
+      "time": 40100,
+      "note": "E4"
+    },
+    {
+      "lane": 1,
+      "time": 40600,
+      "note": "E4"
+    },
+    {
+      "lane": 2,
+      "time": 41100,
+      "note": "G4"
+    },
+    {
+      "lane": 0,
+      "time": 41600,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 42400,
+      "note": "F#4"
+    },
+    {
+      "lane": 1,
+      "time": 42900,
+      "note": "D4"
+    },
+    {
+      "lane": 2,
+      "time": 43400,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 43900,
+      "note": "A4"
+    },
+    {
+      "lane": 3,
+      "time": 44400,
+      "note": "A4"
+    },
+    {
+      "lane": 1,
+      "time": 44900,
+      "note": "A4"
+    },
+    {
+      "lane": 2,
+      "time": 45900,
+      "note": "B4"
+    },
+    {
+      "lane": 0,
+      "time": 46400,
+      "note": "B4"
+    },
+    {
+      "lane": 3,
+      "time": 46900,
+      "note": "B4"
+    },
+    {
+      "lane": 1,
+      "time": 47400,
+      "note": "A4"
+    },
+    {
+      "lane": 2,
+      "time": 47900,
+      "note": "A4"
+    },
+    {
+      "lane": 0,
+      "time": 48400,
+      "note": "G4"
+    },
+    {
+      "lane": 3,
+      "time": 49400,
+      "note": "F#4"
+    },
+    {
+      "lane": 1,
+      "time": 49900,
+      "note": "B3"
+    },
+    {
+      "lane": 2,
+      "time": 50400,
+      "note": "F#4"
+    },
+    {
+      "lane": 0,
+      "time": 50900,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 51400,
+      "note": "F#4"
+    },
+    {
+      "lane": 1,
+      "time": 51900,
       "note": "G4"
     },
     {
       "lane": 2,
-      "time": 15000,
-      "note": "A3"
+      "time": 52400,
+      "note": "G4"
+    },
+    {
+      "lane": 0,
+      "time": 52900,
+      "note": "E4"
+    },
+    {
+      "lane": 3,
+      "time": 53400,
+      "note": "E4"
     },
     {
       "lane": 1,
-      "time": 15500,
-      "note": "F#4"
-    },
-    {
-      "lane": 2,
-      "time": 16000,
-      "note": "E4"
-    },
-    {
-      "lane": 3,
-      "time": 16500,
+      "time": 53900,
       "note": "E4"
     },
     {
       "lane": 2,
-      "time": 17000,
-      "note": "F#4"
+      "time": 54400,
+      "note": "E4"
+    },
+    {
+      "lane": 0,
+      "time": 54900,
+      "note": "G4"
     },
     {
       "lane": 3,
-      "time": 17500,
+      "time": 55400,
+      "note": "F#4"
+    },
+    {
+      "lane": 1,
+      "time": 56400,
       "note": "F#4"
     },
     {
       "lane": 2,
-      "time": 18000,
+      "time": 56900,
+      "note": "D4"
+    },
+    {
+      "lane": 0,
+      "time": 57400,
+      "note": "F#4"
+    },
+    {
+      "lane": 3,
+      "time": 57900,
+      "note": "E4"
+    },
+    {
+      "lane": 1,
+      "time": 58400,
+      "note": "E4"
+    },
+    {
+      "lane": 2,
+      "time": 58900,
+      "note": "E4"
+    },
+    {
+      "lane": 0,
+      "time": 59400,
+      "note": "E4"
+    },
+    {
+      "lane": 3,
+      "time": 59900,
       "note": "D4"
     }
   ]

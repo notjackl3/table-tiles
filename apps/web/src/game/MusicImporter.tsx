@@ -14,7 +14,8 @@ import {
 } from './import/songGenerator';
 import type { ExtractionStrategy } from './import/melodyExtractor';
 import { getDefaultOMRConfig, checkOMRServiceAvailability, OMR_SETUP_INSTRUCTIONS } from './import/omrService';
-import { convertMIDIToAudio, uploadAudioFile, type ConversionProgress } from './import/midiToAudioConverter';
+import { uploadAudioFile } from './import/midiToAudioConverter';
+import { Button } from '../components/Button';
 
 interface MusicImporterProps {
   onImportComplete?: (songId: string) => void;
@@ -27,9 +28,10 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [omrAvailable, setOmrAvailable] = useState<boolean | null>(null);
-  const [audioProgress, setAudioProgress] = useState<ConversionProgress | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [songName, setSongName] = useState('');
@@ -57,7 +59,6 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
     setIsProcessing(true);
     setError(null);
     setImportResult(null);
-    setAudioProgress(null);
 
     try {
       const options: SongImportOptions = {
@@ -73,41 +74,20 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
       if (importType === 'midi') {
         result = await importFromMIDI(file, options);
 
-        // Generate background audio from MIDI file
-        try {
-          console.log('[Music Importer] Converting MIDI to audio...');
-          const audioResult = await convertMIDIToAudio(file, (progress) => {
-            setAudioProgress(progress);
-          });
+        // Upload user-provided audio file if one is selected
+        if (audioFile) {
+          try {
+            console.log('[Music Importer] Uploading background audio...');
+            const audioPath = await uploadAudioFile(audioFile, result.beatmap.id);
+            console.log('[Music Importer] Audio uploaded to:', audioPath);
 
-          // Upload audio file to server
-          setAudioProgress({
-            status: 'encoding',
-            progress: 90,
-            message: 'Uploading audio file...'
-          });
+            // Update beatmap with audio file path
+            result.beatmap.audioFile = audioPath;
 
-          const audioPath = await uploadAudioFile(audioResult.audioBlob, result.beatmap.id);
-          console.log('[Music Importer] Audio uploaded to:', audioPath);
-
-          // Update beatmap with audio file path
-          result.beatmap.audioFile = audioPath;
-
-          setAudioProgress({
-            status: 'complete',
-            progress: 100,
-            message: 'Audio generation complete!'
-          });
-
-        } catch (audioError) {
-          console.warn('[Music Importer] Audio generation failed:', audioError);
-          // Don't fail the entire import - just log the warning
-          result.warnings.push('Background audio generation failed. Song will use synthesized audio.');
-          setAudioProgress({
-            status: 'error',
-            progress: 0,
-            message: 'Audio generation failed (song will use synthesized audio)'
-          });
+          } catch (audioError) {
+            console.warn('[Music Importer] Audio upload failed:', audioError);
+            result.warnings.push('Background audio upload failed. Song will use synthesized audio.');
+          }
         }
       } else {
         const omrConfig = getDefaultOMRConfig();
@@ -152,6 +132,13 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
     }
   };
 
+  const handleAudioFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAudioFile(file);
+    }
+  };
+
   return (
     <div style={{
       background: '#f5f1e8',
@@ -161,8 +148,9 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
       marginBottom: '16px'
     }}>
       {/* Header - Always visible */}
-      <button
+      <Button
         onClick={() => setIsExpanded(!isExpanded)}
+        disableClickSound={true}
         style={{
           width: '100%',
           padding: '16px',
@@ -179,7 +167,7 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
       >
         <span>Import Music</span>
         <span style={{ fontSize: '1.2rem' }}>{isExpanded ? 'v' : '>'}</span>
-      </button>
+      </Button>
 
       {/* Content - Expandable */}
       {isExpanded && (
@@ -190,8 +178,9 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
               Import From:
             </label>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button
+              <Button
                 onClick={() => handleImportTypeChange('midi')}
+                disableClickSound={true}
                 style={{
                   flex: 1,
                   padding: '8px',
@@ -207,9 +196,10 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
                 }}
               >
                 MIDI File
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => handleImportTypeChange('image')}
+                disableClickSound={true}
                 style={{
                   flex: 1,
                   padding: '8px',
@@ -225,7 +215,7 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
                 }}
               >
                 Sheet Music Image
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -326,6 +316,69 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
             </select>
           </div>
 
+          {/* Background Audio File (Optional) */}
+          {importType === 'midi' && (
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '4px', color: '#5a4d3a', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                Background Audio (Optional)
+              </label>
+              <div style={{ fontSize: '0.75rem', color: '#8b7355', marginBottom: '8px' }}>
+                Upload a WAV or MP3 file to play as background music. If not provided, notes will be synthesized.
+              </div>
+              <input
+                ref={audioFileInputRef}
+                type="file"
+                accept="audio/wav,audio/mp3,audio/mpeg,.wav,.mp3"
+                onChange={handleAudioFileSelect}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  border: '2px solid #d4c7b0',
+                  borderRadius: '4px',
+                  fontSize: '0.85rem',
+                  boxSizing: 'border-box',
+                  background: 'white'
+                }}
+              />
+              {audioFile && (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  background: '#e6f7e9',
+                  border: '2px solid #6fa87a',
+                  borderRadius: '4px',
+                  fontSize: '0.8rem',
+                  color: '#5a4d3a',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span>✓ {audioFile.name}</span>
+                  <Button
+                    onClick={() => {
+                      setAudioFile(null);
+                      if (audioFileInputRef.current) {
+                        audioFileInputRef.current.value = '';
+                      }
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      background: '#c75450',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* File Input */}
           <input
             ref={fileInputRef}
@@ -336,9 +389,10 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
           />
 
           {/* Import Button */}
-          <button
+          <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing || !songName.trim() || (importType === 'image' && omrAvailable === false)}
+            disableClickSound={true}
             style={{
               width: '100%',
               padding: '12px',
@@ -356,39 +410,7 @@ export function MusicImporter({ onImportComplete }: MusicImporterProps) {
             }}
           >
             {isProcessing ? 'Processing...' : `Select ${importType === 'midi' ? 'MIDI' : 'Image'} File`}
-          </button>
-
-          {/* Audio Conversion Progress */}
-          {audioProgress && audioProgress.status !== 'complete' && (
-            <div style={{
-              marginTop: '12px',
-              padding: '12px',
-              background: audioProgress.status === 'error' ? '#ffe6e6' : '#e6f7ff',
-              border: `2px solid ${audioProgress.status === 'error' ? '#c75450' : '#6fa87a'}`,
-              borderRadius: '4px',
-              color: '#5a4d3a',
-              fontSize: '0.85rem'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <strong>{audioProgress.message}</strong>
-                <span>{audioProgress.progress}%</span>
-              </div>
-              <div style={{
-                width: '100%',
-                height: '8px',
-                background: '#d4c7b0',
-                borderRadius: '4px',
-                overflow: 'hidden'
-              }}>
-                <div style={{
-                  width: `${audioProgress.progress}%`,
-                  height: '100%',
-                  background: audioProgress.status === 'error' ? '#c75450' : '#6fa87a',
-                  transition: 'width 0.3s ease'
-                }} />
-              </div>
-            </div>
-          )}
+          </Button>
 
           {/* Error Display */}
           {error && (

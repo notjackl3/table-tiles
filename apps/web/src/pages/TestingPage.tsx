@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SensitivityTestUI } from '../vision/sensitivity/SensitivityTestUI';
 import { VisionLoop } from '../vision/visionLoop';
+import { Button } from '../components/Button';
 
 export function TestingPage() {
   const navigate = useNavigate();
@@ -125,7 +126,7 @@ export function TestingPage() {
       background: 'var(--bg-primary)',
       position: 'relative',
     }}>
-      <button
+      <Button
         className="button"
         onClick={() => navigate('/')}
         style={{
@@ -139,7 +140,7 @@ export function TestingPage() {
         }}
       >
         Back
-      </button>
+      </Button>
 
       {cameraReady && (
         <SensitivityTestUI

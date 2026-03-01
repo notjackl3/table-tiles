@@ -10,6 +10,7 @@ import { SettingsPanel } from '../game/SettingsPanel';
 import { SongSelection } from '../game/SongSelection';
 import { loadSong } from '../game/songs/songLoader';
 import { saveHighScore, getHighScore } from '../game/highScores';
+import { Button } from '../components/Button';
 
 export function GamePage() {
   const navigate = useNavigate();
@@ -501,40 +502,8 @@ export function GamePage() {
       ctx.fillStyle = 'rgba(139, 115, 85, 0.1)';
       ctx.fillRect(0, hitLineY - 60, width, 60);
 
-      // Draw audio wave effects (horizontal waves in background)
-      const now = performance.now();
-      audioWaves.forEach((wave) => {
-        const age = now - wave.timestamp;
-        if (age < 1000) { // Show for 1 second
-          const opacity = 1 - (age / 1000); // Fade out
-          const amplitude = 15 * (1 - age / 1000); // Wave height decreases over time
-          const frequency = 0.02; // Wave frequency
-          const speed = age * 0.003; // Animation speed
-
-          // Draw multiple horizontal waves across the background
-          for (let waveNum = 0; waveNum < 3; waveNum++) {
-            const yOffset = (height / 4) * (waveNum + 1); // Spread waves vertically
-            const waveOpacity = opacity * (1 - waveNum * 0.2); // Each wave slightly more transparent
-
-            ctx.strokeStyle = `rgba(139, 115, 85, ${waveOpacity * 0.4})`; // Light brown
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-
-            // Draw sine wave across the width
-            for (let x = 0; x <= width; x += 5) {
-              const y = yOffset + Math.sin((x * frequency) + speed + (waveNum * 0.5)) * amplitude;
-              if (x === 0) {
-                ctx.moveTo(x, y);
-              } else {
-                ctx.lineTo(x, y);
-              }
-            }
-            ctx.stroke();
-          }
-        }
-      });
-
       // Draw white flash tiles (ghost tiles from finger taps)
+      const now = performance.now();
       flashTiles.forEach((flash) => {
         const age = now - flash.timestamp;
         if (age < 300) { // Show for 300ms
@@ -883,7 +852,16 @@ export function GamePage() {
               fontSize: fontSizes[announcement.size],
               fontWeight: 900,
               color: '#ffffff',
-              textShadow: '0 0 30px rgba(0,0,0,0.9), 0 0 60px rgba(255,255,255,0.5), 0 4px 8px rgba(0,0,0,0.8)',
+              textShadow: `
+                0 0 10px rgba(255,255,255,1),
+                0 0 20px rgba(255,255,255,0.9),
+                0 0 30px rgba(255,255,255,0.7),
+                0 0 40px rgba(255,255,255,0.5),
+                0 0 60px rgba(255,255,255,0.6),
+                0 0 80px rgba(255,255,255,0.4),
+                0 4px 8px rgba(0,0,0,0.8),
+                0 0 100px rgba(255,255,255,0.3)
+              `,
               opacity,
               pointerEvents: 'none',
               zIndex: 2000,
@@ -892,6 +870,7 @@ export function GamePage() {
               letterSpacing: '0.1em',
               WebkitTextStroke: '2px rgba(0,0,0,0.8)',
               transition: 'none',
+              filter: 'drop-shadow(0 0 15px rgba(255,255,255,0.8)) drop-shadow(0 0 25px rgba(255,255,255,0.5))',
             }}
           >
             {announcement.text}
@@ -934,7 +913,7 @@ export function GamePage() {
                   gap: '6px',
                 }}>
                   {(['low', 'medium', 'high'] as const).map((level) => (
-                    <button
+                    <Button
                       key={level}
                       onClick={() => setHypeLevel(level)}
                       style={{
@@ -954,7 +933,7 @@ export function GamePage() {
                     >
                       <span style={{ textTransform: 'capitalize' }}>{level}</span>
                       {hypeLevel === level && <span>✓</span>}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -979,7 +958,7 @@ export function GamePage() {
                   gap: '6px',
                 }}>
                   {/* Voice Announcements Toggle */}
-                  <button
+                  <Button
                     onClick={() => setVoiceAnnouncementsEnabled(!voiceAnnouncementsEnabled)}
                     style={{
                       padding: '8px 12px',
@@ -998,10 +977,10 @@ export function GamePage() {
                   >
                     <span>Announcements</span>
                     {voiceAnnouncementsEnabled && <span>✓</span>}
-                  </button>
+                  </Button>
 
                   {/* Voice Effects Toggle */}
-                  <button
+                  <Button
                     onClick={() => setVoiceEffectsEnabled(!voiceEffectsEnabled)}
                     style={{
                       padding: '8px 12px',
@@ -1020,10 +999,10 @@ export function GamePage() {
                   >
                     <span>Voice Effects</span>
                     {voiceEffectsEnabled && <span>✓</span>}
-                  </button>
+                  </Button>
 
                   {/* Visual Effects Toggle */}
-                  <button
+                  <Button
                     onClick={() => setVisualEffectsEnabled(!visualEffectsEnabled)}
                     style={{
                       padding: '8px 12px',
@@ -1042,10 +1021,10 @@ export function GamePage() {
                   >
                     <span>Visual Effects</span>
                     {visualEffectsEnabled && <span>✓</span>}
-                  </button>
+                  </Button>
 
                   {/* Screen Shake Toggle */}
-                  <button
+                  <Button
                     onClick={() => setScreenShakeEnabled(!screenShakeEnabled)}
                     style={{
                       padding: '8px 12px',
@@ -1064,7 +1043,7 @@ export function GamePage() {
                   >
                     <span>Screen Shake</span>
                     {screenShakeEnabled && <span>✓</span>}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1074,7 +1053,7 @@ export function GamePage() {
               borderRight: '3px solid #d4c7b0',
               borderTop: '2px solid #d4c7b0',
             }}>
-              <button
+              <Button
                 className="button button-primary"
                 onClick={startGame}
                 style={{
@@ -1087,13 +1066,78 @@ export function GamePage() {
                 }}
               >
                 Start Game
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {/* Game canvas container */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', position: 'relative' }}>
+          {/* Audio wave effects - Outside the game board */}
+          {gameStarted && audioWaves.map((wave, index) => {
+            const now = performance.now();
+            const age = now - wave.timestamp;
+            if (age >= 1000) return null; // Don't render expired waves
+
+            const opacity = 1 - (age / 1000); // Fade out
+            const amplitude = 40; // Wave height in pixels
+            const frequency = 0.015; // Wave frequency
+            const speed = age * 0.005; // Animation speed
+
+            return (
+              <div
+                key={`${wave.lane}-${wave.timestamp}-${index}`}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                  overflow: 'hidden',
+                }}
+              >
+                <svg
+                  width="100%"
+                  height="100%"
+                  viewBox="0 0 1000 1000"
+                  preserveAspectRatio="none"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                  }}
+                >
+                  {[0, 1, 2].map((waveNum) => {
+                    const waveOpacity = opacity * (1 - waveNum * 0.25);
+                    const yOffset = 250 + (waveNum * 250); // Spread waves vertically (25%, 50%, 75%)
+                    const currentAmplitude = amplitude * (1 - age / 1000) * (1 - waveNum * 0.1);
+
+                    // Create path for sine wave across full width
+                    const points = 200; // Number of points for smooth wave
+                    const pathData = Array.from({ length: points }, (_, i) => {
+                      const x = (i / points) * 1000; // Spread across viewBox width
+                      const y = yOffset + Math.sin((i * frequency) + speed + (waveNum * 0.5)) * currentAmplitude;
+                      return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
+                    }).join(' ');
+
+                    return (
+                      <path
+                        key={waveNum}
+                        d={pathData}
+                        stroke={`rgba(139, 115, 85, ${waveOpacity * 0.5})`}
+                        strokeWidth="4"
+                        fill="none"
+                        strokeLinecap="round"
+                      />
+                    );
+                  })}
+                </svg>
+              </div>
+            );
+          })}
+
           <div className="game-canvas-container">
           {/* Video feed */}
           <video
@@ -1191,7 +1235,7 @@ export function GamePage() {
       </div> */}
 
       {/* Back button */}
-      <button
+      <Button
         className="button"
         onClick={handleBackButton}
         style={{
@@ -1204,10 +1248,10 @@ export function GamePage() {
         }}
       >
         Back
-      </button>
+      </Button>
 
       {/* Test Audio button */}
-      <button
+      <Button
         className="button"
         onClick={() => {
           audioEngine.initialize();
@@ -1227,7 +1271,7 @@ export function GamePage() {
         title="Test 3D spatial audio - listen to a sound rotate 360° around your head"
       >
         Test Audio
-      </button>
+      </Button>
     </div>
   );
 }
